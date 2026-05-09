@@ -1,0 +1,7 @@
+pandas
+numpy
+finance-datareader
+requests
+python-dotenv
+pyarrow
+openpyxl

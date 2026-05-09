@@ -1,0 +1,55 @@
+﻿priority,part,name,symbol,source,frequency,save_dir,description
+1,stock_price,samsung_electronics,005930,FDR,daily,prices,Samsung Electronics stock price
+1,stock_price,sk_hynix,000660,FDR,daily,prices,SK Hynix stock price
+1,stock_price,nvidia,NVDA,FDR,daily,prices,NVIDIA stock price
+1,semi_index,vanEck_semiconductor_etf_smh,SMH,FDR,daily,semi_indices,Semiconductor ETF proxy for SOX/global semi cycle
+1,semi_index,ishares_semiconductor_etf_soxx,SOXX,FDR,daily,semi_indices,Semiconductor ETF proxy for SOX
+1,semi_index,phlx_semiconductor_index_sox,SOX,FDR,daily,semi_indices,PHLX Semiconductor Index direct symbol trial
+1,semi_index,phlx_semiconductor_index_yahoo,^SOX,FDR,daily,semi_indices,PHLX Semiconductor Index Yahoo style symbol trial
+1,global_index,kospi,KS11,FDR,daily,global_indices,Korea market common factor
+1,global_index,kospi200,KS200,FDR,daily,global_indices,Korea large-cap market factor
+1,global_index,kosdaq,KQ11,FDR,daily,global_indices,Korea growth/tech sentiment
+1,global_index,nasdaq_composite,IXIC,FDR,daily,global_indices,US technology beta
+1,global_index,sp500,S&P500,FDR,daily,global_indices,US risk asset common factor
+1,global_index,dow_jones,DJI,FDR,daily,global_indices,US cyclical large-cap sentiment
+1,global_index,russell2000,RUT,FDR,daily,global_indices,US small-cap risk appetite
+1,global_index,vix,VIX,FDR,daily,global_indices,Risk aversion and volatility
+1,global_index,shanghai_composite,SSEC,FDR,daily,global_indices,China demand and Asia manufacturing proxy
+1,global_index,hang_seng,HSI,FDR,daily,global_indices,China/Hong Kong risk sentiment
+1,global_index,nikkei225,N225,FDR,daily,global_indices,Japan equipment/material supply-chain proxy
+1,fx,usd_krw,USD/KRW,FDR,daily,fx_rates,KRW FX factor
+1,fx,usd_cny,USD/CNY,FDR,daily,fx_rates,China FX and demand stress proxy
+1,fx,usd_jpy,USD/JPY,FDR,daily,fx_rates,Japan FX and carry/risk proxy
+1,fx,cny_krw,CNY/KRW,FDR,daily,fx_rates,Korea-China FX relationship
+1,rate_dollar,us_5y_treasury,US5YT,FDR,daily,rates,US 5-year treasury yield
+1,rate_dollar,us_10y_treasury,US10YT,FDR,daily,rates,US 10-year treasury yield
+1,rate_dollar,us_30y_treasury,US30YT,FDR,daily,rates,US 30-year treasury yield
+1,rate_dollar,dollar_index,^NYICDX,FDR,daily,rates,US dollar index
+1,future,wti_crude_oil,CL=F,FDR,daily,futures,WTI crude oil futures
+1,future,brent_crude_oil,BZ=F,FDR,daily,futures,Brent crude oil futures
+1,future,natural_gas,NG=F,FDR,daily,futures,Natural gas futures
+1,future,gold,GC=F,FDR,daily,futures,Gold futures
+1,future,silver,SI=F,FDR,daily,futures,Silver futures
+1,future,copper,HG=F,FDR,daily,futures,Copper futures
+1,fred,federal_funds_rate,FRED:FEDFUNDS,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,us_10y_treasury_fred,FRED:DGS10,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,us_2y_treasury_fred,FRED:DGS2,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,us_10y_2y_spread,FRED:T10Y2Y,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,vix_fred,FRED:VIXCLS,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,nasdaq_composite_fred,FRED:NASDAQCOM,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,broad_dollar_index,FRED:DTWEXBGS,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,industrial_production,FRED:INDPRO,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,semiconductor_electronic_component_industrial_production,FRED:IPG3344S,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,semiconductor_related_device_ppi,FRED:PCU334413334413P,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,fred,computers_electronic_products_new_orders,FRED:A34SNO,FDR/FRED,mixed,fred,FRED macro/semiconductor indicator
+1,financials,samsung_electronics_finstate_y,NAVER/FINSTATE-Y/005930,FDR/NAVER,annual,financials,Domestic financial statement
+1,financials,samsung_electronics_finstate_q,NAVER/FINSTATE-Q/005930,FDR/NAVER,quarterly,financials,Domestic financial statement
+1,financials,sk_hynix_finstate_y,NAVER/FINSTATE-Y/000660,FDR/NAVER,annual,financials,Domestic financial statement
+1,financials,sk_hynix_finstate_q,NAVER/FINSTATE-Q/000660,FDR/NAVER,quarterly,financials,Domestic financial statement
+2,financials,nvidia_sec_companyfacts,https://data.sec.gov/api/xbrl/companyfacts/CIK0001045810.json,external_public,source_dependent,sec,"NVIDIA SEC company facts for revenue, income, inventory, capex-related line items"
+2,semi_supply_demand,sia_market_data_page,https://www.semiconductors.org/data-resources/market-data/,external_public,source_dependent,public_pages,SIA/WSTS semiconductor market data landing page availability check
+2,semi_equipment,semi_billings_page,https://www.semi.org/en/products-services/market-data/equipment/billings-report,external_public,source_dependent,public_pages,SEMI equipment billings landing page availability check
+2,memory_prices,trendforce_dram_prices_page,https://www.trendforce.com/price,external_public,source_dependent,public_pages,TrendForce/DRAMeXchange memory price page availability check
+2,foundry_revenue,tsmc_monthly_revenue_page,https://investor.tsmc.com/english/monthly-revenue,external_public,source_dependent,public_pages,TSMC monthly revenue landing page availability check
+3,event,nvidia_investor_events_page,https://investor.nvidia.com/events-and-presentations/events-and-presentations/default.aspx,external_public,source_dependent,public_pages,NVIDIA investor events and presentation page availability check
+3,event,chips_act_nist_page,https://www.nist.gov/chips,external_public,source_dependent,public_pages,CHIPS Act event/policy data source availability check
