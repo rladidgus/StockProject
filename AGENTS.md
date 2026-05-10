@@ -1,6 +1,6 @@
 # 거시경제 지표 기반 반도체 핵심주 요인 영향력 분석
 
-## 프로젝트 파이프라인 가이드 (claude.md)
+## 프로젝트 파이프라인 가이드 (AGENTS.md)
 
 ---
 
@@ -20,7 +20,7 @@
 
 ```
 project/
-├── claude.md                  # 이 파일 (파이프라인 전체 가이드)
+├── AGENTS.md                  # 이 파일 (파이프라인 전체 가이드)
 ├── .env                       # DB 연결 정보 (Git 제외 필수)
 ├── .env.example               # 연결 정보 템플릿 (Git 포함)
 ├── .gitignore                 # .env 반드시 추가
@@ -620,48 +620,6 @@ def save_shap_to_db(shap_values, X_test, ticker):
     )
     print(f"[SHAP 저장 완료] {ticker}: {len(rows)}행")
 ```
-
----
-
-## 📦 requirements.txt
-
-```
-# 데이터 수집
-FinanceDataReader>=0.9.50
-yfinance>=0.2.40
-pykrx>=1.0.45
-OpenDartReader>=0.7.1
-
-# 데이터 처리
-pandas>=2.0.0
-numpy>=1.24.0
-
-# 모델링
-scikit-learn>=1.4.0
-xgboost>=2.0.0
-imbalanced-learn>=0.12.0
-
-# XAI
-shap>=0.45.0
-
-# 하이퍼파라미터 튜닝
-optuna>=3.6.0
-
-# 시각화
-matplotlib>=3.8.0
-seaborn>=0.13.0
-plotly>=5.20.0
-
-# 통계 검정
-statsmodels>=0.14.0
-
-# PostgreSQL 연결
-psycopg2-binary>=2.9.9
-sqlalchemy>=2.0.0
-python-dotenv>=1.0.0
-```
-
----
 
 ## ⚠️ 주의사항 & 체크리스트
 

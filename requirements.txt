@@ -1,8 +1,8 @@
 # 데이터 수집
-FinanceDataReader>=0.9.50
+finance-datareader>=0.9.50
 yfinance>=0.2.40
 pykrx>=1.0.45
-OpenDartReader>=0.7.1
+OpenDartReader==0.2.3
 
 # 데이터 처리
 pandas>=2.0.0

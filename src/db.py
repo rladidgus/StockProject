@@ -10,14 +10,17 @@ DB_URL = (
 )
 
 
+# .env 기반 PostgreSQL SQLAlchemy 엔진을 생성한다.
 def get_engine():
     return create_engine(DB_URL, pool_pre_ping=True)
 
 
+# PostgreSQL 연결 객체를 반환한다.
 def get_conn():
     return get_engine().connect()
 
 
+# 프로젝트에서 사용하는 PostgreSQL 테이블과 인덱스를 초기화한다.
 def init_db():
     engine = get_engine()
     with engine.connect() as conn:
@@ -33,11 +36,15 @@ def init_db():
                 date DATE PRIMARY KEY,
                 nasdaq NUMERIC(12,4), sox NUMERIC(12,4), vix NUMERIC(8,4),
                 us_rate NUMERIC(6,4), usd_krw NUMERIC(10,4),
+                kospi NUMERIC(12,4), kospi200 NUMERIC(12,4),
                 nasdaq_lag1 NUMERIC(12,4), nasdaq_lag3 NUMERIC(12,4),
                 nasdaq_lag5 NUMERIC(12,4), vix_lag1 NUMERIC(8,4),
                 vix_lag3 NUMERIC(8,4), vix_lag5 NUMERIC(8,4),
                 us_rate_lag1 NUMERIC(6,4), usd_krw_lag1 NUMERIC(10,4)
             );
+            ALTER TABLE macro_features
+                ADD COLUMN IF NOT EXISTS kospi NUMERIC(12,4),
+                ADD COLUMN IF NOT EXISTS kospi200 NUMERIC(12,4);
             CREATE TABLE IF NOT EXISTS micro_features (
                 date DATE NOT NULL, ticker VARCHAR(10) NOT NULL,
                 revenue NUMERIC(20,2), operating_profit NUMERIC(20,2),
@@ -53,11 +60,18 @@ def init_db():
             CREATE TABLE IF NOT EXISTS shap_results (
                 id SERIAL PRIMARY KEY,
                 date DATE NOT NULL, ticker VARCHAR(10) NOT NULL,
+                feature_set VARCHAR(50) NOT NULL DEFAULT 'proposed',
                 feature_name VARCHAR(50) NOT NULL,
-                shap_value NUMERIC(12,6), feature_value NUMERIC(12,6)
+                shap_value NUMERIC(20,6), feature_value NUMERIC(20,6)
             );
+            ALTER TABLE shap_results
+                ADD COLUMN IF NOT EXISTS feature_set VARCHAR(50) NOT NULL DEFAULT 'proposed',
+                ALTER COLUMN shap_value TYPE NUMERIC(20,6),
+                ALTER COLUMN feature_value TYPE NUMERIC(20,6);
             CREATE INDEX IF NOT EXISTS idx_shap_ticker_date
                 ON shap_results (ticker, date);
+            CREATE INDEX IF NOT EXISTS idx_shap_ticker_feature_set_date
+                ON shap_results (ticker, feature_set, date);
             CREATE INDEX IF NOT EXISTS idx_stock_ticker
                 ON stock_prices (ticker);
         """))
