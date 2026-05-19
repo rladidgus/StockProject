@@ -5,6 +5,7 @@
 - 삼성전자(`005930`) 주가 데이터 수집 완료
 - SK하이닉스(`000660`) 주가 데이터 수집 완료
 - 거시 지표 수집 완료
+- zip 데이터 수집 패키지의 확장 시장/거시/FRED 수집 항목을 `market_features` 테이블과 `data/raw/fdr/` 백업 구조로 접목 완료
 - 삼성전자와 SK하이닉스 외국인/기관 수급 데이터 수집 완료
 - 전처리 산출물 생성 완료: `data/processed/samsung_preprocessed.csv`
 - 전처리 산출물 생성 완료: `data/processed/sk_hynix_preprocessed.csv`
@@ -150,6 +151,20 @@ CSV 로드
 → 성능 평가
 → 결과 저장
 ```
+
+## 확장 데이터 수집
+
+zip 수집 패키지의 넓은 수집 항목은 기존 `macro_features`를 깨지 않도록 별도 long-form 테이블인 `market_features`에 저장한다.
+
+```bash
+python src/db.py
+python src/collect.py --extended-market --skip-core
+```
+
+- DB 저장 위치: `market_features(date, feature_name, feature_group, source, value)`
+- 원본 CSV 백업: `data/raw/fdr/prices`, `semi_indices`, `global_indices`, `fx_rates`, `rates`, `futures`, `fred`
+- 수집 메타데이터: `data/metadata/extended_collection_summary.csv`
+- 포함 항목: 반도체 ETF/지수, 글로벌 지수, 환율, 미국 금리/달러, 원자재 선물, FRED 거시·반도체 지표
 
 ## 다음 작업
 - 삼성전자 SHAP 산출물 생성 완료:

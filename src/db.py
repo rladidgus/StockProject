@@ -57,6 +57,14 @@ def init_db():
                 put_call_ratio NUMERIC(8,4), short_interest NUMERIC(8,4),
                 PRIMARY KEY (date, ticker)
             );
+            CREATE TABLE IF NOT EXISTS market_features (
+                date DATE NOT NULL,
+                feature_name VARCHAR(80) NOT NULL,
+                feature_group VARCHAR(30) NOT NULL,
+                source VARCHAR(30) NOT NULL,
+                value NUMERIC(20,6),
+                PRIMARY KEY (date, feature_name)
+            );
             CREATE TABLE IF NOT EXISTS shap_results (
                 id SERIAL PRIMARY KEY,
                 date DATE NOT NULL, ticker VARCHAR(10) NOT NULL,
@@ -74,6 +82,10 @@ def init_db():
                 ON shap_results (ticker, feature_set, date);
             CREATE INDEX IF NOT EXISTS idx_stock_ticker
                 ON stock_prices (ticker);
+            CREATE INDEX IF NOT EXISTS idx_market_features_name_date
+                ON market_features (feature_name, date);
+            CREATE INDEX IF NOT EXISTS idx_market_features_group_date
+                ON market_features (feature_group, date);
         """))
         conn.commit()
     print("PostgreSQL DB 초기화 완료")
