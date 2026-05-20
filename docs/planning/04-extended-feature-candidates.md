@@ -27,17 +27,21 @@ Extended 피처의 모델 투입 승격 기준은 이후 모델링/평가 단계
 
 ### 2.1. 피처 분류
 
-| 구분 | 의미 | baseline 성공 조건 포함 | 1차 모델 투입 |
-|---|---|---:|---:|
-| `core` | 공식 baseline에 필요한 핵심 피처 | 포함 | 포함 |
-| `extended-collect` | 수집은 진행하지만 baseline 성공 조건에는 넣지 않는 피처 | 제외 | 제외 |
-| `extended-model-candidate` | core-only baseline 이후 ablation 또는 비교 실험으로 검증할 피처 | 제외 | 조건부 |
-| `archive/reference` | 구조화 수치가 아니거나 라이선스·재현성 문제로 모델 입력에 쓰지 않는 자료 | 제외 | 제외 |
+피처 분류는 "이 데이터가 프로젝트에서 어떤 상태인가"를 나타낸다.
+실행 등급은 다음 절에서 "지금 무엇을 할 것인가"를 나타낸다.
 
-`extended-collect`와 `extended-model-candidate`는 순차 관계다.
-먼저 수집 가능한 후보를 `extended-collect`로 확보하고,
-look-ahead 검증, 중복성 검토, target별 적합성 확인을 통과한 뒤에만
-`extended-model-candidate`로 승격한다.
+| 구분 | 의미 | 대응 실행 등급 | baseline 성공 조건 포함 | 1차 모델 투입 |
+|---|---|---|---:|---:|
+| `core` | 공식 baseline에 필요한 핵심 피처 | 별도 core 수집/검증 | 포함 | 포함 |
+| `extended-collect` | 나중에 쓸 수 있으므로 우선 수집 대상으로 관리하는 확장 피처 | `collect-now`, `collect-later` | 제외 | 제외 |
+| `extended-model-candidate` | 수집된 extended 중 core-only baseline 이후 모델 실험 대상으로 승격된 피처 | `model-ablation-only`, `model-after-lag-rule`, `target-specific-only` | 제외 | 검증 후 가능 |
+| `archive/reference` | 참고용으로 보관하지만 현재 모델 피처가 아닌 자료 | `archive-only` | 제외 | 제외 |
+
+즉 `extended-collect`와 `extended-model-candidate`는 같은 축의 병렬 등급이 아니라 순차 관계다.
+먼저 수집 가능한 후보를 `extended-collect`로 확보한다.
+그중 look-ahead 검증, 중복성 검토, target별 적합성 확인을 통과한 피처만
+모델링 단계에서 `extended-model-candidate`로 승격한다.
+`exclude`는 피처 분류가 아니라 이번 범위에서 수집 또는 모델 투입을 하지 않겠다는 실행 판단이다.
 
 ### 2.2. 실행 등급
 
@@ -136,6 +140,8 @@ look-ahead 검증, 중복성 검토, target별 적합성 확인을 통과한 뒤
 
 ## 7. 상세 피처 검토
 
+이 표는 3장의 실행 판단 요약에 나온 항목을 같은 기준으로 다시 풀어 쓴다.
+
 | 피처 | 후보 소스/심볼 | 수집 실행 | 모델 실행 | 논리 타당성 | 실행 가능성 | core 중복 위험 | look-ahead 위험 | 논거 |
 |---|---|---|---|---|---|---|---|---|
 | 미국 10년물 금리 | `FRED:DGS10`, `US10YT` | `collect-now` | `model-ablation-only` | 강함 | 높음 | 중간 | 중간 | 장기 할인율 프록시로 성장주·반도체주 밸류에이션 부담을 설명한다. |
@@ -155,6 +161,12 @@ look-ahead 검증, 중복성 검토, target별 적합성 확인을 통과한 뒤
 | 구리 가격 | `HG=F` | `collect-later` | `model-ablation-only` | 약함~중간 | 높음 | 중간 | 낮음~중간 | 제조업·AI 인프라·경기 프록시이나 반도체 직접 원가로 주장하면 과장이다. |
 | DRAM/NAND/HBM 가격 | TrendForce, DRAMeXchange, 수동 CSV | `archive-only` | `exclude` | 강함 | 낮음 | 낮음 | 중간~높음 | 논리는 강하지만 구조화 데이터, 라이선스, 과거 시계열 재현성이 확보되기 전까지 모델 제외다. |
 | SEMI equipment billings | SEMI Billings | `archive-only` | `exclude` | 중간 | 낮음~중간 | 낮음 | 높음 | 설비투자 사이클 자료지만 구조화 시계열 확보 전까지 모델 제외다. |
+| SIA/WSTS/TrendForce HTML | 외부 공개 페이지 | `archive-only` | `exclude` | 중간~강함 | 낮음 | 낮음 | 높음 | HTML 원문은 참고 자료일 뿐 구조화 수치 피처가 아니다. 수치 시계열이 확보되기 전까지 모델 제외다. |
+| TSMC monthly revenue page | TSMC IR page | `archive-only` | `exclude` | 중간 | 낮음 | 낮음 | 높음 | 파운드리·AI 수요 프록시 가능성은 있으나 `data_collection`에서 403으로 실패했다. 대체 소스 확보 전까지 모델 제외다. |
+| Dow Jones / Russell 2000 / Nikkei225 | `DJI`, `RUT`, `N225` | `exclude` | `exclude` | 약함~중간 | 높음 | 중간~높음 | 낮음~중간 | 시장·위험선호 프록시로는 가능하지만 현재 core/extended 후보 대비 반도체 직접성이 약하다. |
+| WTI / Brent / 천연가스 / 금 / 은 | `CL=F`, `BZ=F`, `NG=F`, `GC=F`, `SI=F` | `exclude` | `exclude` | 약함~중간 | 높음 | 중간 | 낮음~중간 | 원자재는 반도체 직접 원가보다 경기, 인플레이션, 위험회피 프록시에 가깝다. 현재 범위에서는 제외한다. |
+| CNY/KRW | `CNY/KRW` | `exclude` | `exclude` | 약함 | 낮음 | 중간 | 중간 | `data_collection` 결과에서 row가 1개 수준이라 재현 가능한 피처로 보기 어렵다. |
+| 뉴스 감성 | 뉴스 원문, 감성 점수 | `collect-later` | `exclude` | 중간 | 낮음 | 낮음 | 높음 | 제안서 취지에는 맞지만 수집, 정제, 라벨링, 시점 정렬 난도가 높다. 별도 설계 전까지 모델 제외다. |
 
 ---
 
@@ -207,3 +219,60 @@ Extended 피처는 수집 가능하면 함께 수집할 수 있다.
 
 이 구조가 가장 안전한 이유는,
 데이터 확보를 미루지 않으면서도 "많이 모았으니 다 넣는다"는 위험을 피할 수 있기 때문이다.
+
+---
+
+## 10. 수집 대상 최종 목록
+
+수집 단계에서의 결론은 단순하다.
+`exclude`를 제외하고, 자동 수집 가능성과 구현 비용에 따라 아래 순서로 진행한다.
+
+### 10.1. 지금 수집할 피처
+
+아래 피처는 `collect-now`다.
+core 수집과 함께 진행하되, metadata에서는 `extended`로 분리하고
+baseline 성공 조건에는 포함하지 않는다.
+
+- `DGS10`
+- `DGS2`
+- `T10Y2Y`
+- `DTWEXBGS`
+- `S&P500`
+- `SMH`
+- `SOXX`
+- `IPG3344S`
+- `PCU334413334413P`
+- `A34SNO`
+- NVIDIA SEC Company Facts
+- 국내 기업 분기 실적
+- 국내 외국인/기관 순매수
+
+### 10.2. 여유가 있으면 수집할 피처
+
+아래 피처는 `collect-later`다.
+논리는 있지만 수집 경로, 발표일 정렬, 구현 비용을 더 확인해야 하므로
+지금 단계의 필수 수집 대상은 아니다.
+
+- 한국 반도체 수출액/증감률
+- `KOSDAQ`
+- 구리 가격
+- 뉴스 감성 원천 자료
+
+### 10.3. 지금은 수집보다 보관 또는 제외할 자료
+
+아래 항목은 현재 모델 피처로 쓰지 않는다.
+구조화 시계열, 라이선스, 과거 재현성이 확보되기 전까지는
+archive/reference 또는 제외 대상으로 둔다.
+
+- DRAM/NAND/HBM 가격
+- SEMI equipment billings
+- SIA/WSTS/TrendForce HTML
+- TSMC monthly revenue page
+- Dow Jones, Russell 2000, Nikkei225
+- WTI, Brent, 천연가스, 금, 은
+- CNY/KRW
+
+따라서 "일단 다 수집"의 실제 의미는
+`core + collect-now`를 우선 수집하고,
+시간이 남으면 `collect-later`를 추가 수집한다는 뜻이다.
+`archive-only`와 `exclude`는 지금 모델 피처 수집 대상으로 보지 않는다.
