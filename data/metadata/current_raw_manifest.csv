@@ -1,2 +1,2 @@
 ﻿run_id,run_start,run_end,raw_run_path,run_metadata_path,collection_summary_path,source_catalog_path,adopted_at
-20260519T142302583283Z-de7987ab,2018-01-01,2024-12-31,data/raw/runs/20260519T142302583283Z-de7987ab,data/metadata/runs/20260519T142302583283Z-de7987ab,data/metadata/runs/20260519T142302583283Z-de7987ab/collection_summary.csv,data/metadata/source_catalog.csv,2026-05-19T14:23:06.135036+00:00
+20260520T155315691434Z-82034936,2011-01-01,2026-05-21,data/raw/runs/20260520T155315691434Z-82034936,data/metadata/runs/20260520T155315691434Z-82034936,data/metadata/runs/20260520T155315691434Z-82034936/collection_summary.csv,data/metadata/source_catalog.csv,2026-05-20T15:54:36.407206+00:00

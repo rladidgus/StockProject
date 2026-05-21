@@ -126,3 +126,9 @@
 
 확장 피처 후보를 구체적으로 검토할 때는
 `docs/planning/04-extended-feature-candidates.md`를 기준으로 삼는다.
+
+수집 기간과 `data_collection` 재사용 산출물의 기간 차이를 다룰 때는
+`docs/implementation/05-date-range-policy.md`를 기준으로 삼는다.
+
+뉴스 감성을 제외한 extended 피처 수집 완료 상태와 공식 run id는
+`docs/implementation/06-extended-collection-result.md`를 기준으로 삼는다.
