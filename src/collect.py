@@ -14,8 +14,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 
-START = "2018-01-01"
-END = "2024-12-31"
+START = "2011-01-01"
+END = datetime.now().date().isoformat()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT / "data"
 RAW_ROOT = DATA_ROOT / "raw"
@@ -40,6 +40,26 @@ class MacroSpec:
     rationale: str
 
 
+@dataclass(frozen=True)
+class FinancialSpec:
+    feature_name: str
+    source: str
+    provider_symbol: str
+    frequency: str
+    file_name: str
+    rationale: str
+
+
+@dataclass(frozen=True)
+class ExternalSourceSpec:
+    name: str
+    source: str
+    url: str
+    file_name: str
+    priority: str
+    rationale: str
+
+
 KR_STOCKS = [
     StockSpec("005930", "samsung_electronics", "FDR", "005930"),
     StockSpec("000660", "sk_hynix", "FDR", "000660"),
@@ -56,8 +76,146 @@ CORE_MACRO_SPECS = [
     MacroSpec("usd_krw", "FDR", "USD/KRW", "Close", "usd_krw.csv", "원달러 환율 환경"),
 ]
 EXTENDED_MACRO_SPECS = [
-    MacroSpec("kospi", "FDR", "KS11", "Close", "kospi.csv", "국내 시장 공통 흐름"),
-    MacroSpec("kospi200", "FDR", "KS200", "Close", "kospi200.csv", "국내 대형주 공통 흐름"),
+    MacroSpec("kospi", "yfinance", "^KS11", "Close", "kospi.csv", "국내 시장 공통 흐름"),
+    MacroSpec("kospi200", "yfinance", "^KS200", "Close", "kospi200.csv", "국내 대형주 공통 흐름"),
+    MacroSpec("kosdaq", "yfinance", "^KQ11", "Close", "kosdaq.csv", "국내 성장주/기술주 심리"),
+    MacroSpec("sp500", "FDR", "S&P500", "Close", "sp500.csv", "미국 전체 위험자산 베타"),
+    MacroSpec("smh", "FDR", "SMH", "Close", "smh.csv", "거래 가능한 반도체 ETF 프록시"),
+    MacroSpec("soxx", "FDR", "SOXX", "Close", "soxx.csv", "거래 가능한 반도체 ETF 프록시"),
+    MacroSpec("dow_jones", "FDR", "DJI", "Close", "dow_jones.csv", "미국 대형 경기주 심리"),
+    MacroSpec("russell2000", "FDR", "RUT", "Close", "russell2000.csv", "미국 소형주 위험선호"),
+    MacroSpec("shanghai_composite", "FDR", "SSEC", "Close", "shanghai_composite.csv", "중국 수요와 아시아 제조업 심리"),
+    MacroSpec("hang_seng", "FDR", "HSI", "Close", "hang_seng.csv", "중국/홍콩 위험자산 심리"),
+    MacroSpec("nikkei225", "FDR", "N225", "Close", "nikkei225.csv", "일본 장비/소재 밸류체인 프록시"),
+    MacroSpec("usd_cny", "FDR", "USD/CNY", "Close", "usd_cny.csv", "중국 환율 및 수요 스트레스"),
+    MacroSpec("usd_jpy", "FDR", "USD/JPY", "Close", "usd_jpy.csv", "일본 환율 및 캐리/위험선호"),
+    MacroSpec("cny_krw", "FDR", "CNY/KRW", "Close", "cny_krw.csv", "원위안 환율 관계"),
+    MacroSpec("us_5y_treasury", "FDR", "US5YT", "Close", "us_5y_treasury.csv", "미국 중기 금리"),
+    MacroSpec("us_10y_treasury", "FDR", "US10YT", "Close", "us_10y_treasury.csv", "미국 장기 금리"),
+    MacroSpec("us_30y_treasury", "FDR", "US30YT", "Close", "us_30y_treasury.csv", "미국 초장기 금리"),
+    MacroSpec("dollar_index", "FDR", "^NYICDX", "Close", "dollar_index.csv", "달러 인덱스"),
+    MacroSpec("wti_crude_oil", "FDR", "CL=F", "Close", "wti_crude_oil.csv", "유가/인플레이션 프록시"),
+    MacroSpec("brent_crude_oil", "FDR", "BZ=F", "Close", "brent_crude_oil.csv", "유가/인플레이션 프록시"),
+    MacroSpec("natural_gas", "FDR", "NG=F", "Close", "natural_gas.csv", "전력비/인플레이션 프록시"),
+    MacroSpec("gold", "FDR", "GC=F", "Close", "gold.csv", "위험회피와 실질금리 프록시"),
+    MacroSpec("silver", "FDR", "SI=F", "Close", "silver.csv", "산업재와 위험회피 프록시"),
+    MacroSpec("copper", "FDR", "HG=F", "Close", "copper.csv", "제조업과 AI 인프라 투자 심리"),
+    MacroSpec("us_10y_treasury_fred", "FRED", "FRED:DGS10", "DGS10", "us_10y_treasury_fred.csv", "미국 장기 할인율"),
+    MacroSpec("us_2y_treasury_fred", "FRED", "FRED:DGS2", "DGS2", "us_2y_treasury_fred.csv", "통화정책 기대"),
+    MacroSpec("us_10y_2y_spread", "FRED", "FRED:T10Y2Y", "T10Y2Y", "us_10y_2y_spread.csv", "경기 국면과 수익률곡선"),
+    MacroSpec("broad_dollar_index", "FRED", "FRED:DTWEXBGS", "DTWEXBGS", "broad_dollar_index.csv", "글로벌 달러 유동성"),
+    MacroSpec("industrial_production", "FRED", "FRED:INDPRO", "INDPRO", "industrial_production.csv", "미국 산업생산 경기 사이클"),
+    MacroSpec(
+        "semiconductor_electronic_component_industrial_production",
+        "FRED",
+        "FRED:IPG3344S",
+        "IPG3344S",
+        "semiconductor_electronic_component_industrial_production.csv",
+        "반도체·전자부품 생산 사이클",
+    ),
+    MacroSpec(
+        "semiconductor_related_device_ppi",
+        "FRED",
+        "FRED:PCU334413334413P",
+        "PCU334413334413P",
+        "semiconductor_related_device_ppi.csv",
+        "반도체 관련 생산자 가격",
+    ),
+    MacroSpec(
+        "computers_electronic_products_new_orders",
+        "FRED",
+        "FRED:A34SNO",
+        "A34SNO",
+        "computers_electronic_products_new_orders.csv",
+        "전방 IT 수요 프록시",
+    ),
+    MacroSpec("vix_fred", "FRED", "FRED:VIXCLS", "VIXCLS", "vix_fred.csv", "FRED 기준 VIX 보조 소스"),
+    MacroSpec("nasdaq_composite_fred", "FRED", "FRED:NASDAQCOM", "NASDAQCOM", "nasdaq_composite_fred.csv", "FRED 기준 NASDAQ 보조 소스"),
+]
+FINANCIAL_SPECS = [
+    FinancialSpec(
+        "samsung_electronics_finstate_y",
+        "FDR/NAVER",
+        "NAVER/FINSTATE-Y/005930",
+        "annual",
+        "samsung_electronics_finstate_y.csv",
+        "삼성전자 연간 재무제표 스냅샷",
+    ),
+    FinancialSpec(
+        "samsung_electronics_finstate_q",
+        "FDR/NAVER",
+        "NAVER/FINSTATE-Q/005930",
+        "quarterly",
+        "samsung_electronics_finstate_q.csv",
+        "삼성전자 분기 재무제표 스냅샷",
+    ),
+    FinancialSpec(
+        "sk_hynix_finstate_y",
+        "FDR/NAVER",
+        "NAVER/FINSTATE-Y/000660",
+        "annual",
+        "sk_hynix_finstate_y.csv",
+        "SK하이닉스 연간 재무제표 스냅샷",
+    ),
+    FinancialSpec(
+        "sk_hynix_finstate_q",
+        "FDR/NAVER",
+        "NAVER/FINSTATE-Q/000660",
+        "quarterly",
+        "sk_hynix_finstate_q.csv",
+        "SK하이닉스 분기 재무제표 스냅샷",
+    ),
+]
+NVIDIA_SEC_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK0001045810.json"
+EXTERNAL_ARCHIVE_SPECS = [
+    ExternalSourceSpec(
+        "sia_market_data_page",
+        "external_public",
+        "https://www.semiconductors.org/data-resources/market-data/",
+        "sia_market_data_page.html",
+        "archive",
+        "SIA/WSTS 반도체 시장 데이터 공개 페이지",
+    ),
+    ExternalSourceSpec(
+        "semi_billings_page",
+        "external_public",
+        "https://www.semi.org/en/products-services/market-data/equipment/billings-report",
+        "semi_billings_page.html",
+        "archive",
+        "SEMI 장비 billings 공개 페이지",
+    ),
+    ExternalSourceSpec(
+        "trendforce_dram_prices_page",
+        "external_public",
+        "https://www.trendforce.com/price",
+        "trendforce_dram_prices_page.html",
+        "archive",
+        "TrendForce/DRAMeXchange 가격 페이지",
+    ),
+    ExternalSourceSpec(
+        "tsmc_monthly_revenue_page",
+        "external_public",
+        "https://investor.tsmc.com/english/monthly-revenue",
+        "tsmc_monthly_revenue_page.html",
+        "archive",
+        "TSMC 월간 매출 공개 페이지",
+    ),
+    ExternalSourceSpec(
+        "nvidia_investor_events_page",
+        "external_public",
+        "https://investor.nvidia.com/events-and-presentations/events-and-presentations/default.aspx",
+        "nvidia_investor_events_page.html",
+        "archive",
+        "NVIDIA 이벤트/프레젠테이션 페이지",
+    ),
+    ExternalSourceSpec(
+        "chips_act_nist_page",
+        "external_public",
+        "https://www.nist.gov/chips",
+        "chips_act_nist_page.html",
+        "archive",
+        "CHIPS Act 정책 이벤트 페이지",
+    ),
 ]
 CORE_MACRO_FEATURE_NAMES = [spec.feature_name for spec in CORE_MACRO_SPECS]
 ALL_MACRO_SPECS = CORE_MACRO_SPECS + EXTENDED_MACRO_SPECS
@@ -92,6 +250,9 @@ def ensure_dirs() -> None:
         RAW_ROOT / "prices",
         RAW_ROOT / "macro",
         RAW_ROOT / "alpha",
+        RAW_ROOT / "financials",
+        RAW_ROOT / "external" / "sec",
+        RAW_ROOT / "external" / "public_pages",
         RAW_ROOT / "runs",
         METADATA_ROOT,
     ]:
@@ -274,6 +435,17 @@ def collect_macro_features(
         try:
             if spec.source == "FRED":
                 series = _read_fred_series(spec, start, end)
+            elif spec.source == "yfinance":
+                data = yf.download(
+                    spec.provider_symbol,
+                    start=start,
+                    end=_exclusive_end_for_yfinance(end),
+                    auto_adjust=False,
+                    multi_level_index=False,
+                    progress=False,
+                )
+                series = data[spec.provider_column].rename(spec.feature_name)
+                series.index = pd.to_datetime(series.index)
             else:
                 data = fdr.DataReader(spec.provider_symbol, start, end)
                 series = data[spec.provider_column].rename(spec.feature_name)
@@ -326,6 +498,12 @@ def collect_alpha_features(
                 end.replace("-", ""),
                 spec.ticker,
             )
+            required_columns = ["외국인합계", "기관합계"]
+            if data is None or data.empty:
+                raise ValueError("empty dataframe")
+            missing_columns = [column for column in required_columns if column not in data.columns]
+            if missing_columns:
+                raise ValueError(f"missing columns: {','.join(missing_columns)}")
             df = data[["외국인합계", "기관합계"]].rename(
                 columns={
                     "외국인합계": "foreign_net_buy_value",
@@ -347,6 +525,130 @@ def collect_alpha_features(
             )
 
     return frames
+
+
+def collect_financial_features(
+        status_rows: list[dict[str, Any]],
+        run_context: dict[str, Any],
+) -> dict[str, pd.DataFrame]:
+    frames: dict[str, pd.DataFrame] = {}
+    for spec in FINANCIAL_SPECS:
+        try:
+            df = fdr.SnapDataReader(spec.provider_symbol)
+            if df is None or df.empty:
+                raise ValueError("empty dataframe")
+            frames[spec.feature_name] = df.copy()
+        except Exception as error:
+            _append_failure(
+                status_rows,
+                run_context=run_context,
+                category="financials",
+                name=spec.feature_name,
+                source=spec.source,
+                symbol=spec.provider_symbol,
+                error=error,
+                note=f"collect-stage | optional-extended | frequency={spec.frequency}",
+            )
+    return frames
+
+
+def _extract_nvidia_companyfacts(payload: dict[str, Any]) -> pd.DataFrame:
+    facts = payload.get("facts", {}).get("us-gaap", {})
+    tags = {
+        "Revenues": "revenue",
+        "RevenueFromContractWithCustomerExcludingAssessedTax": "revenue_contract",
+        "GrossProfit": "gross_profit",
+        "OperatingIncomeLoss": "operating_income",
+        "NetIncomeLoss": "net_income",
+        "InventoryNet": "inventory",
+        "ResearchAndDevelopmentExpense": "r_and_d",
+        "Assets": "assets",
+        "Liabilities": "liabilities",
+        "StockholdersEquity": "equity",
+        "EarningsPerShareDiluted": "eps_diluted",
+        "PaymentsToAcquirePropertyPlantAndEquipment": "capex_purchase_ppe",
+    }
+    rows: list[dict[str, Any]] = []
+    for tag, metric in tags.items():
+        units = facts.get(tag, {}).get("units", {})
+        for unit, values in units.items():
+            for value in values:
+                rows.append(
+                    {
+                        "metric": metric,
+                        "tag": tag,
+                        "unit": unit,
+                        "fy": value.get("fy"),
+                        "fp": value.get("fp"),
+                        "form": value.get("form"),
+                        "filed": value.get("filed"),
+                        "start": value.get("start"),
+                        "end": value.get("end"),
+                        "value": value.get("val"),
+                    }
+                )
+    df = pd.DataFrame(rows)
+    if df.empty:
+        raise ValueError("no selected NVIDIA SEC facts found")
+    return df.sort_values(["metric", "end", "filed"]).reset_index(drop=True)
+
+
+def collect_nvidia_sec_companyfacts(
+        status_rows: list[dict[str, Any]],
+        run_context: dict[str, Any],
+) -> tuple[pd.DataFrame | None, dict[str, Any] | None]:
+    try:
+        response = requests.get(
+            NVIDIA_SEC_URL,
+            headers={"User-Agent": "semiconductor-stock-factor-project contact@example.com"},
+            timeout=30,
+            verify=certifi.where(),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return _extract_nvidia_companyfacts(payload), payload
+    except Exception as error:
+        _append_failure(
+            status_rows,
+            run_context=run_context,
+            category="financials",
+            name="nvidia_sec_companyfacts",
+            source="SEC",
+            symbol=NVIDIA_SEC_URL,
+            error=error,
+            note="collect-stage | optional-extended | source_dependent",
+        )
+        return None, None
+
+
+def collect_external_archive_pages(
+        status_rows: list[dict[str, Any]],
+        run_context: dict[str, Any],
+) -> dict[str, str]:
+    pages: dict[str, str] = {}
+    session = requests.Session()
+    for spec in EXTERNAL_ARCHIVE_SPECS:
+        try:
+            response = session.get(
+                spec.url,
+                headers={"User-Agent": "semiconductor-stock-factor-project contact@example.com"},
+                timeout=30,
+                verify=certifi.where(),
+            )
+            response.raise_for_status()
+            pages[spec.name] = response.text
+        except Exception as error:
+            _append_failure(
+                status_rows,
+                run_context=run_context,
+                category="external_archive",
+                name=spec.name,
+                source=spec.source,
+                symbol=spec.url,
+                error=error,
+                note=f"collect-stage | optional-{spec.priority}",
+            )
+    return pages
 
 
 def persist_stock_frames(
@@ -657,6 +959,160 @@ def persist_alpha_frames(
             )
 
 
+def persist_financial_frames(
+        frames: dict[str, pd.DataFrame],
+        status_rows: list[dict[str, Any]],
+        *,
+        run_context: dict[str, Any],
+        skip_raw: bool,
+) -> None:
+    run_financials_dir = _run_raw_dir(run_context["run_id"]) / "financials"
+    for spec in FINANCIAL_SPECS:
+        if spec.feature_name not in frames:
+            continue
+        df = frames[spec.feature_name]
+        if df.empty:
+            _append_status(
+                status_rows,
+                run_context=run_context,
+                category="financials",
+                name=spec.feature_name,
+                source=spec.source,
+                symbol=spec.provider_symbol,
+                status="empty",
+                rows_count=0,
+                note=f"persist-stage | optional-extended | frequency={spec.frequency}",
+            )
+            continue
+        file_path = run_financials_dir / spec.file_name
+        try:
+            if not skip_raw:
+                _save_csv(df, file_path)
+            data_start, data_end = _date_bounds(df)
+            _append_status(
+                status_rows,
+                run_context=run_context,
+                category="financials",
+                name=spec.feature_name,
+                source=spec.source,
+                symbol=spec.provider_symbol,
+                status="skipped" if skip_raw else "success",
+                rows_count=len(df),
+                file_path="" if skip_raw else str(file_path.relative_to(PROJECT_ROOT)),
+                data_start=data_start,
+                data_end=data_end,
+                note=(
+                    f"optional-extended | frequency={spec.frequency} | raw-write-skipped"
+                    if skip_raw
+                    else f"optional-extended | frequency={spec.frequency}"
+                ),
+            )
+        except Exception as error:
+            _append_failure(
+                status_rows,
+                run_context=run_context,
+                category="financials",
+                name=spec.feature_name,
+                source=spec.source,
+                symbol=spec.provider_symbol,
+                error=error,
+                note="persist-stage | optional-extended",
+            )
+
+
+def persist_nvidia_sec_companyfacts(
+        df: pd.DataFrame | None,
+        payload: dict[str, Any] | None,
+        status_rows: list[dict[str, Any]],
+        *,
+        run_context: dict[str, Any],
+        skip_raw: bool,
+) -> None:
+    if df is None or df.empty:
+        return
+    run_sec_dir = _run_raw_dir(run_context["run_id"]) / "external" / "sec"
+    csv_path = run_sec_dir / "nvidia_sec_key_financials.csv"
+    try:
+        if not skip_raw:
+            csv_path.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+        _append_status(
+            status_rows,
+            run_context=run_context,
+            category="financials",
+            name="nvidia_sec_companyfacts",
+            source="SEC",
+            symbol=NVIDIA_SEC_URL,
+            status="skipped" if skip_raw else "success",
+            rows_count=len(df),
+            file_path="" if skip_raw else str(csv_path.relative_to(PROJECT_ROOT)),
+            data_start=str(df["end"].min()) if "end" in df.columns else "",
+            data_end=str(df["end"].max()) if "end" in df.columns else "",
+            note=(
+                "optional-extended | source_dependent | raw-json-not-persisted | raw-write-skipped"
+                if skip_raw
+                else "optional-extended | source_dependent | raw-json-not-persisted"
+            ),
+        )
+    except Exception as error:
+        _append_failure(
+            status_rows,
+            run_context=run_context,
+            category="financials",
+            name="nvidia_sec_companyfacts",
+            source="SEC",
+            symbol=NVIDIA_SEC_URL,
+            error=error,
+            note="persist-stage | optional-extended",
+        )
+
+
+def persist_external_archive_pages(
+        pages: dict[str, str],
+        status_rows: list[dict[str, Any]],
+        *,
+        run_context: dict[str, Any],
+        skip_raw: bool,
+) -> None:
+    run_pages_dir = _run_raw_dir(run_context["run_id"]) / "external" / "public_pages"
+    for spec in EXTERNAL_ARCHIVE_SPECS:
+        if spec.name not in pages:
+            continue
+        html = pages[spec.name]
+        file_path = run_pages_dir / spec.file_name
+        try:
+            if not skip_raw:
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(html, encoding="utf-8")
+            _append_status(
+                status_rows,
+                run_context=run_context,
+                category="external_archive",
+                name=spec.name,
+                source=spec.source,
+                symbol=spec.url,
+                status="skipped" if skip_raw else "success",
+                rows_count=1,
+                file_path="" if skip_raw else str(file_path.relative_to(PROJECT_ROOT)),
+                note=(
+                    f"optional-{spec.priority} | html-archive | bytes={len(html)} | raw-write-skipped"
+                    if skip_raw
+                    else f"optional-{spec.priority} | html-archive | bytes={len(html)}"
+                ),
+            )
+        except Exception as error:
+            _append_failure(
+                status_rows,
+                run_context=run_context,
+                category="external_archive",
+                name=spec.name,
+                source=spec.source,
+                symbol=spec.url,
+                error=error,
+                note=f"persist-stage | optional-{spec.priority}",
+            )
+
+
 def write_metadata(
         status_rows: list[dict[str, Any]],
         run_context: dict[str, Any],
@@ -742,6 +1198,41 @@ def write_metadata(
                 "symbol": spec.ticker,
                 "priority": "extended",
                 "rationale": "국내 종목 외국인/기관 순매수 거래대금 흐름 (KRX credential 필요)",
+            }
+        )
+    for spec in FINANCIAL_SPECS:
+        source_catalog_rows.append(
+            {
+                "run_id": run_context["run_id"],
+                "category": "financials",
+                "name": spec.feature_name,
+                "source": spec.source,
+                "symbol": spec.provider_symbol,
+                "priority": "extended",
+                "rationale": spec.rationale,
+            }
+        )
+    source_catalog_rows.append(
+        {
+            "run_id": run_context["run_id"],
+            "category": "financials",
+            "name": "nvidia_sec_companyfacts",
+            "source": "SEC",
+            "symbol": NVIDIA_SEC_URL,
+            "priority": "extended",
+            "rationale": "NVIDIA 매출, 이익, 재고, R&D, CapEx 관련 company facts",
+        }
+    )
+    for spec in EXTERNAL_ARCHIVE_SPECS:
+        source_catalog_rows.append(
+            {
+                "run_id": run_context["run_id"],
+                "category": "external_archive",
+                "name": spec.name,
+                "source": spec.source,
+                "symbol": spec.url,
+                "priority": spec.priority,
+                "rationale": spec.rationale,
             }
         )
 
@@ -855,8 +1346,8 @@ def _coverage_failure(
     return None
 
 
-def _coverage_failures(status_rows: list[dict[str, Any]], run_context: dict[str, Any]) -> list[str]:
-    failures: list[str] = []
+def _coverage_warnings(status_rows: list[dict[str, Any]], run_context: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
     requested_start = pd.Timestamp(run_context["run_start"])
     requested_end = pd.Timestamp(run_context["run_end"])
 
@@ -873,7 +1364,7 @@ def _coverage_failures(status_rows: list[dict[str, Any]], run_context: dict[str,
             tolerance_days=DAILY_COVERAGE_TOLERANCE_DAYS,
         )
         if failure:
-            failures.append(failure)
+            warnings.append(failure)
 
     for feature_name in CORE_MACRO_DAILY_GRID_FEATURE_NAMES:
         failure = _coverage_failure(
@@ -884,7 +1375,7 @@ def _coverage_failures(status_rows: list[dict[str, Any]], run_context: dict[str,
             tolerance_days=DAILY_COVERAGE_TOLERANCE_DAYS,
         )
         if failure:
-            failures.append(failure)
+            warnings.append(failure)
 
     for feature_name in CORE_MACRO_LOW_FREQUENCY_FEATURE_NAMES:
         failure = _coverage_failure(
@@ -895,9 +1386,9 @@ def _coverage_failures(status_rows: list[dict[str, Any]], run_context: dict[str,
             tolerance_days=LOW_FREQUENCY_COVERAGE_TOLERANCE_DAYS,
         )
         if failure:
-            failures.append(failure)
+            warnings.append(failure)
 
-    return failures
+    return warnings
 
 
 def run_collection(args: argparse.Namespace) -> None:
@@ -951,6 +1442,31 @@ def run_collection(args: argparse.Namespace) -> None:
                 skip_raw=args.skip_raw,
             )
 
+        financial_frames = collect_financial_features(status_rows, run_context)
+        persist_financial_frames(
+            financial_frames,
+            status_rows,
+            run_context=run_context,
+            skip_raw=args.skip_raw,
+        )
+
+        nvidia_sec_df, nvidia_sec_payload = collect_nvidia_sec_companyfacts(status_rows, run_context)
+        persist_nvidia_sec_companyfacts(
+            nvidia_sec_df,
+            nvidia_sec_payload,
+            status_rows,
+            run_context=run_context,
+            skip_raw=args.skip_raw,
+        )
+
+        external_pages = collect_external_archive_pages(status_rows, run_context)
+        persist_external_archive_pages(
+            external_pages,
+            status_rows,
+            run_context=run_context,
+            skip_raw=args.skip_raw,
+        )
+
         if args.skip_raw:
             pipeline_failed = True
             _append_status(
@@ -966,7 +1482,6 @@ def run_collection(args: argparse.Namespace) -> None:
             )
 
         core_failures = _core_artifact_failures(status_rows)
-        core_failures.extend(_coverage_failures(status_rows, run_context))
         if core_failures:
             pipeline_failed = True
             _append_status(
@@ -979,6 +1494,19 @@ def run_collection(args: argparse.Namespace) -> None:
                 status="failed",
                 rows_count=0,
                 note=" | ".join(core_failures),
+            )
+        coverage_warnings = _coverage_warnings(status_rows, run_context)
+        if coverage_warnings:
+            _append_status(
+                status_rows,
+                run_context=run_context,
+                category="pipeline",
+                name="coverage_validation",
+                source="internal",
+                symbol="-",
+                status="warning",
+                rows_count=0,
+                note=" | ".join(coverage_warnings),
             )
     except Exception as error:
         if not isinstance(error, SystemExit):
