@@ -1,0 +1,57 @@
+﻿run_id,category,name,source,symbol,priority,rationale
+20260520T155315691434Z-82034936,stock_price,samsung_electronics,FDR,005930,core,분석 대상 종목 가격과 라벨 생성의 기준
+20260520T155315691434Z-82034936,stock_price,sk_hynix,FDR,000660,core,분석 대상 종목 가격과 라벨 생성의 기준
+20260520T155315691434Z-82034936,stock_price,nvidia,yfinance,NVDA,core,분석 대상 종목 가격과 라벨 생성의 기준
+20260520T155315691434Z-82034936,macro_series,nasdaq,FDR,IXIC,core,미국 기술주 전반 위험선호
+20260520T155315691434Z-82034936,macro_series,sox,FDR,^SOX,core,반도체 업종 전반 강도
+20260520T155315691434Z-82034936,macro_series,vix,FDR,VIX,core,시장 변동성 및 위험회피 심리
+20260520T155315691434Z-82034936,macro_series,us_rate,FRED,FRED:FEDFUNDS,core,미국 기준금리 환경
+20260520T155315691434Z-82034936,macro_series,usd_krw,FDR,USD/KRW,core,원달러 환율 환경
+20260520T155315691434Z-82034936,macro,core_macro_features,internal_bundle,"IXIC,^SOX,VIX,FRED:FEDFUNDS,USD/KRW",core,전처리 단계로 넘기는 공식 core macro bundle
+20260520T155315691434Z-82034936,macro_series,kospi,yfinance,^KS11,extended,국내 시장 공통 흐름
+20260520T155315691434Z-82034936,macro_series,kospi200,yfinance,^KS200,extended,국내 대형주 공통 흐름
+20260520T155315691434Z-82034936,macro_series,kosdaq,yfinance,^KQ11,extended,국내 성장주/기술주 심리
+20260520T155315691434Z-82034936,macro_series,sp500,FDR,S&P500,extended,미국 전체 위험자산 베타
+20260520T155315691434Z-82034936,macro_series,smh,FDR,SMH,extended,거래 가능한 반도체 ETF 프록시
+20260520T155315691434Z-82034936,macro_series,soxx,FDR,SOXX,extended,거래 가능한 반도체 ETF 프록시
+20260520T155315691434Z-82034936,macro_series,dow_jones,FDR,DJI,extended,미국 대형 경기주 심리
+20260520T155315691434Z-82034936,macro_series,russell2000,FDR,RUT,extended,미국 소형주 위험선호
+20260520T155315691434Z-82034936,macro_series,shanghai_composite,FDR,SSEC,extended,중국 수요와 아시아 제조업 심리
+20260520T155315691434Z-82034936,macro_series,hang_seng,FDR,HSI,extended,중국/홍콩 위험자산 심리
+20260520T155315691434Z-82034936,macro_series,nikkei225,FDR,N225,extended,일본 장비/소재 밸류체인 프록시
+20260520T155315691434Z-82034936,macro_series,usd_cny,FDR,USD/CNY,extended,중국 환율 및 수요 스트레스
+20260520T155315691434Z-82034936,macro_series,usd_jpy,FDR,USD/JPY,extended,일본 환율 및 캐리/위험선호
+20260520T155315691434Z-82034936,macro_series,cny_krw,FDR,CNY/KRW,extended,원위안 환율 관계
+20260520T155315691434Z-82034936,macro_series,us_5y_treasury,FDR,US5YT,extended,미국 중기 금리
+20260520T155315691434Z-82034936,macro_series,us_10y_treasury,FDR,US10YT,extended,미국 장기 금리
+20260520T155315691434Z-82034936,macro_series,us_30y_treasury,FDR,US30YT,extended,미국 초장기 금리
+20260520T155315691434Z-82034936,macro_series,dollar_index,FDR,^NYICDX,extended,달러 인덱스
+20260520T155315691434Z-82034936,macro_series,wti_crude_oil,FDR,CL=F,extended,유가/인플레이션 프록시
+20260520T155315691434Z-82034936,macro_series,brent_crude_oil,FDR,BZ=F,extended,유가/인플레이션 프록시
+20260520T155315691434Z-82034936,macro_series,natural_gas,FDR,NG=F,extended,전력비/인플레이션 프록시
+20260520T155315691434Z-82034936,macro_series,gold,FDR,GC=F,extended,위험회피와 실질금리 프록시
+20260520T155315691434Z-82034936,macro_series,silver,FDR,SI=F,extended,산업재와 위험회피 프록시
+20260520T155315691434Z-82034936,macro_series,copper,FDR,HG=F,extended,제조업과 AI 인프라 투자 심리
+20260520T155315691434Z-82034936,macro_series,us_10y_treasury_fred,FRED,FRED:DGS10,extended,미국 장기 할인율
+20260520T155315691434Z-82034936,macro_series,us_2y_treasury_fred,FRED,FRED:DGS2,extended,통화정책 기대
+20260520T155315691434Z-82034936,macro_series,us_10y_2y_spread,FRED,FRED:T10Y2Y,extended,경기 국면과 수익률곡선
+20260520T155315691434Z-82034936,macro_series,broad_dollar_index,FRED,FRED:DTWEXBGS,extended,글로벌 달러 유동성
+20260520T155315691434Z-82034936,macro_series,industrial_production,FRED,FRED:INDPRO,extended,미국 산업생산 경기 사이클
+20260520T155315691434Z-82034936,macro_series,semiconductor_electronic_component_industrial_production,FRED,FRED:IPG3344S,extended,반도체·전자부품 생산 사이클
+20260520T155315691434Z-82034936,macro_series,semiconductor_related_device_ppi,FRED,FRED:PCU334413334413P,extended,반도체 관련 생산자 가격
+20260520T155315691434Z-82034936,macro_series,computers_electronic_products_new_orders,FRED,FRED:A34SNO,extended,전방 IT 수요 프록시
+20260520T155315691434Z-82034936,macro_series,vix_fred,FRED,FRED:VIXCLS,extended,FRED 기준 VIX 보조 소스
+20260520T155315691434Z-82034936,macro_series,nasdaq_composite_fred,FRED,FRED:NASDAQCOM,extended,FRED 기준 NASDAQ 보조 소스
+20260520T155315691434Z-82034936,alpha,samsung_electronics_alpha,PyKRX,005930,extended,국내 종목 외국인/기관 순매수 거래대금 흐름 (KRX credential 필요)
+20260520T155315691434Z-82034936,alpha,sk_hynix_alpha,PyKRX,000660,extended,국내 종목 외국인/기관 순매수 거래대금 흐름 (KRX credential 필요)
+20260520T155315691434Z-82034936,financials,samsung_electronics_finstate_y,FDR/NAVER,NAVER/FINSTATE-Y/005930,extended,삼성전자 연간 재무제표 스냅샷
+20260520T155315691434Z-82034936,financials,samsung_electronics_finstate_q,FDR/NAVER,NAVER/FINSTATE-Q/005930,extended,삼성전자 분기 재무제표 스냅샷
+20260520T155315691434Z-82034936,financials,sk_hynix_finstate_y,FDR/NAVER,NAVER/FINSTATE-Y/000660,extended,SK하이닉스 연간 재무제표 스냅샷
+20260520T155315691434Z-82034936,financials,sk_hynix_finstate_q,FDR/NAVER,NAVER/FINSTATE-Q/000660,extended,SK하이닉스 분기 재무제표 스냅샷
+20260520T155315691434Z-82034936,financials,nvidia_sec_companyfacts,SEC,https://data.sec.gov/api/xbrl/companyfacts/CIK0001045810.json,extended,"NVIDIA 매출, 이익, 재고, R&D, CapEx 관련 company facts"
+20260520T155315691434Z-82034936,external_archive,sia_market_data_page,external_public,https://www.semiconductors.org/data-resources/market-data/,archive,SIA/WSTS 반도체 시장 데이터 공개 페이지
+20260520T155315691434Z-82034936,external_archive,semi_billings_page,external_public,https://www.semi.org/en/products-services/market-data/equipment/billings-report,archive,SEMI 장비 billings 공개 페이지
+20260520T155315691434Z-82034936,external_archive,trendforce_dram_prices_page,external_public,https://www.trendforce.com/price,archive,TrendForce/DRAMeXchange 가격 페이지
+20260520T155315691434Z-82034936,external_archive,tsmc_monthly_revenue_page,external_public,https://investor.tsmc.com/english/monthly-revenue,archive,TSMC 월간 매출 공개 페이지
+20260520T155315691434Z-82034936,external_archive,nvidia_investor_events_page,external_public,https://investor.nvidia.com/events-and-presentations/events-and-presentations/default.aspx,archive,NVIDIA 이벤트/프레젠테이션 페이지
+20260520T155315691434Z-82034936,external_archive,chips_act_nist_page,external_public,https://www.nist.gov/chips,archive,CHIPS Act 정책 이벤트 페이지
