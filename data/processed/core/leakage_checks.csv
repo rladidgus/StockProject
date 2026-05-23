@@ -1,0 +1,4 @@
+﻿name,ticker,forbidden_same_day_columns,missing_audit_columns,known_date_after_lag_cutoff_rows,passed
+nvidia,NVDA,,,0,True
+samsung_electronics,005930,,,0,True
+sk_hynix,000660,,,0,True

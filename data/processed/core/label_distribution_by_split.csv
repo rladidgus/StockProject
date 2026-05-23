@@ -1,0 +1,16 @@
+﻿name,ticker,period_bucket,time_split,rows,up_rows_1pct,down_rows_1pct,neutral_rows_1pct
+nvidia,NVDA,model_2018_2024,test,265,104,83,78
+nvidia,NVDA,model_2018_2024,train,1232,465,386,381
+nvidia,NVDA,model_2018_2024,validation,264,101,84,79
+nvidia,NVDA,raw_eda,,1761,525,442,794
+nvidia,NVDA,recent_regime_2025_plus,recent_regime,346,128,94,124
+samsung_electronics,005930,model_2018_2024,test,259,62,76,121
+samsung_electronics,005930,model_2018_2024,train,1204,281,294,629
+samsung_electronics,005930,model_2018_2024,validation,258,55,55,148
+samsung_electronics,005930,raw_eda,,944,232,212,500
+samsung_electronics,005930,recent_regime_2025_plus,recent_regime,335,130,88,117
+sk_hynix,000660,model_2018_2024,test,259,96,81,82
+sk_hynix,000660,model_2018_2024,train,1204,358,380,466
+sk_hynix,000660,model_2018_2024,validation,258,72,74,112
+sk_hynix,000660,raw_eda,,944,301,262,381
+sk_hynix,000660,recent_regime_2025_plus,recent_regime,335,144,101,90
