@@ -4,3 +4,5 @@ pykrx>=1.0.45
 requests>=2.31.0
 certifi>=2024.0.0
 pandas>=2.0.0
+scikit-learn>=1.4.0
+xgboost>=2.0.0
