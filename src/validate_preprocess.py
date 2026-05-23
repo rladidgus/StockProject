@@ -6,6 +6,12 @@ from pathlib import Path
 import pandas as pd
 
 PROCESSED_CORE_DIR = Path(__file__).resolve().parents[1] / "data" / "processed" / "core"
+LABEL_HORIZON_DAYS = 5
+CLASS_NAMES = {
+    0: "down",
+    1: "neutral",
+    2: "up",
+}
 
 
 def _dataset_files(input_dir: Path) -> list[Path]:
@@ -74,9 +80,10 @@ def build_label_distribution(input_dir: Path) -> pd.DataFrame:
                     "period_bucket": period_bucket,
                     "time_split": time_split if pd.notna(time_split) else "",
                     "rows": len(group),
-                    "up_rows_1pct": int((group["target_direction_1pct"] == 1).sum()),
-                    "down_rows_1pct": int((group["target_direction_1pct"] == 0).sum()),
-                    "neutral_rows_1pct": int(group["target_direction_1pct"].isna().sum()),
+                    "down_rows_5d": int((group["target_5d_3class"] == 0).sum()),
+                    "neutral_rows_5d": int((group["target_5d_3class"] == 1).sum()),
+                    "up_rows_5d": int((group["target_5d_3class"] == 2).sum()),
+                    "missing_target_rows": int(group["target_5d_3class"].isna().sum()),
                 }
             )
     return pd.DataFrame(rows)
@@ -121,18 +128,144 @@ def build_leakage_checks(input_dir: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_label_policy_checks(input_dir: Path) -> pd.DataFrame:
+    rows = []
+    required_columns = {
+        "future_5d_date",
+        "future_5d_return",
+        "target_threshold_lower",
+        "target_threshold_upper",
+        "target_5d_3class",
+    }
+    supervised_splits = {"train", "validation", "test"}
+
+    for path in _dataset_files(input_dir):
+        data = pd.read_csv(
+            path,
+            encoding="utf-8-sig",
+            parse_dates=["date", "future_5d_date"],
+            dtype={"ticker": "string"},
+        )
+        ticker = str(data["ticker"].iloc[0])
+        name = path.name.removesuffix("_core_features.csv")
+        missing_columns = sorted(required_columns - set(data.columns))
+        if missing_columns:
+            rows.append(
+                {
+                    "name": name,
+                    "ticker": ticker,
+                    "check": "required_label_columns_present",
+                    "violations": len(missing_columns),
+                    "details": ",".join(missing_columns),
+                    "passed": False,
+                }
+            )
+            continue
+
+        tail = data.tail(LABEL_HORIZON_DAYS)
+        tail_missing = int(tail["target_5d_3class"].isna().sum())
+        rows.append(
+            {
+                "name": name,
+                "ticker": ticker,
+                "check": "last_horizon_rows_have_pending_target",
+                "violations": max(0, LABEL_HORIZON_DAYS - tail_missing),
+                "details": f"pending_rows={tail_missing}",
+                "passed": tail_missing == LABEL_HORIZON_DAYS,
+            }
+        )
+
+        supervised = data[data["time_split"].isin(supervised_splits)]
+        missing_supervised_targets = int(supervised["target_5d_3class"].isna().sum())
+        rows.append(
+            {
+                "name": name,
+                "ticker": ticker,
+                "check": "supervised_splits_have_known_targets",
+                "violations": missing_supervised_targets,
+                "details": "",
+                "passed": missing_supervised_targets == 0,
+            }
+        )
+
+        lower = data["target_threshold_lower"]
+        upper = data["target_threshold_upper"]
+        known = data["future_5d_return"].notna() & data["target_5d_3class"].notna()
+        boundary_violations = int(
+            (
+                known
+                & (
+                    ((data["target_5d_3class"] == 0) & (data["future_5d_return"] > lower))
+                    | (
+                        (data["target_5d_3class"] == 1)
+                        & (
+                            (data["future_5d_return"] <= lower)
+                            | (data["future_5d_return"] >= upper)
+                        )
+                    )
+                    | ((data["target_5d_3class"] == 2) & (data["future_5d_return"] < upper))
+                )
+            ).sum()
+        )
+        rows.append(
+            {
+                "name": name,
+                "ticker": ticker,
+                "check": "target_threshold_boundaries",
+                "violations": boundary_violations,
+                "details": "",
+                "passed": boundary_violations == 0,
+            }
+        )
+
+        split_checks = [
+            ("train_validation_embargo", "train", "validation"),
+            ("validation_test_embargo", "validation", "test"),
+        ]
+        for check_name, left_split, right_split in split_checks:
+            left = data[data["time_split"] == left_split]
+            right = data[data["time_split"] == right_split]
+            if left.empty or right.empty:
+                violations = 1
+                details = "missing split"
+            else:
+                max_left_future_date = left["future_5d_date"].max()
+                min_right_date = right["date"].min()
+                violations = int(pd.notna(max_left_future_date) and max_left_future_date >= min_right_date)
+                details = (
+                    f"max_{left_split}_future_5d_date={max_left_future_date.date().isoformat()},"
+                    f"min_{right_split}_date={min_right_date.date().isoformat()}"
+                )
+            rows.append(
+                {
+                    "name": name,
+                    "ticker": ticker,
+                    "check": check_name,
+                    "violations": violations,
+                    "details": details,
+                    "passed": violations == 0,
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
 def write_validation_outputs(input_dir: Path = PROCESSED_CORE_DIR) -> None:
     input_dir.mkdir(parents=True, exist_ok=True)
     feature_coverage = build_feature_coverage(input_dir)
     label_distribution = build_label_distribution(input_dir)
     leakage_checks = build_leakage_checks(input_dir)
+    label_policy_checks = build_label_policy_checks(input_dir)
 
     feature_coverage.to_csv(input_dir / "feature_coverage.csv", index=False, encoding="utf-8-sig")
     label_distribution.to_csv(input_dir / "label_distribution_by_split.csv", index=False, encoding="utf-8-sig")
     leakage_checks.to_csv(input_dir / "leakage_checks.csv", index=False, encoding="utf-8-sig")
+    label_policy_checks.to_csv(input_dir / "label_policy_checks.csv", index=False, encoding="utf-8-sig")
 
     if not leakage_checks["passed"].all():
         raise SystemExit("preprocess leakage checks failed")
+    if not label_policy_checks["passed"].all():
+        raise SystemExit("preprocess label policy checks failed")
 
 
 def parse_args() -> argparse.Namespace:
