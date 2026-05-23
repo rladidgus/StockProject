@@ -10,9 +10,17 @@
 data/processed/core/*_core_features.csv
 ```
 
-중립 구간은 아직 최종 정책이 확정되지 않았으므로,
-이번 baseline 비교에서는 `target_direction_1pct`가 비어 있는 row를 제외하고
-상승(1)과 하락(0)만 이진분류한다.
+공식 target은 `target_5d_3class`다.
+
+```text
+0 = down
+1 = neutral
+2 = up
+```
+
+예측일 `t` 장마감 이후 기준으로 `close[t+5] / close[t] - 1`을 계산하고,
+종목별 train split의 30%/70% 분위수 threshold로 하락/중립/상승을 나눈다.
+target이 비어 있는 row는 supervised 학습과 평가에서 제외한다.
 
 ## 모델
 
@@ -44,8 +52,11 @@ outputs/results/model_comparison/shap_feature_importance.csv
 outputs/figures/model_comparison/*_shap_importance.png
 ```
 
-`model_metrics.csv`에는 accuracy와 confusion matrix 구성값(`tn/fp/fn/tp`)을 저장한다.
-SHAP은 test split 기준 mean absolute SHAP value를 저장하고 bar plot으로 내보낸다.
+`model_metrics.csv`에는 accuracy, balanced accuracy, macro F1, weighted F1,
+class별 precision/recall, 3-class confusion matrix, multiclass log loss,
+예측 class별 평균 향후 5거래일 수익률, up/down long-short spread를 저장한다.
+
+SHAP은 test split 기준 class별 mean absolute SHAP value를 저장하고 bar plot으로 내보낸다.
 
 ## 실행
 

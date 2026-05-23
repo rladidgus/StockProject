@@ -18,7 +18,15 @@ import shap
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    confusion_matrix,
+    f1_score,
+    log_loss,
+    precision_score,
+    recall_score,
+)
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -33,7 +41,14 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results" / "model_comparison"
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures" / "model_comparison"
 
 LAGS = [1, 3, 5]
-TARGET_COLUMN = "target_direction_1pct"
+TARGET_COLUMN = "target_5d_3class"
+RETURN_COLUMN = "future_5d_return"
+CLASS_LABELS = [0, 1, 2]
+CLASS_NAMES = {
+    0: "down",
+    1: "neutral",
+    2: "up",
+}
 RANDOM_STATE = 42
 
 
@@ -116,12 +131,13 @@ def prepare_split(
     data: pd.DataFrame,
     feature_columns: list[str],
     split_name: str,
-) -> tuple[pd.DataFrame, pd.Series]:
+) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     subset = data[data["time_split"] == split_name].copy()
     subset = subset.dropna(subset=feature_columns + [TARGET_COLUMN])
     x = subset[feature_columns].astype(float)
     y = subset[TARGET_COLUMN].astype(int)
-    return x, y
+    realized_return = subset[RETURN_COLUMN].astype(float) if RETURN_COLUMN in subset.columns else pd.Series(dtype=float)
+    return x, y, realized_return
 
 
 def evaluate_predictions(
@@ -133,11 +149,13 @@ def evaluate_predictions(
     split_name: str,
     y_true: pd.Series,
     y_pred: np.ndarray,
+    y_proba: np.ndarray | None,
+    realized_return: pd.Series,
 ) -> dict[str, object]:
-    labels = [0, 1]
-    matrix = confusion_matrix(y_true, y_pred, labels=labels)
-    tn, fp, fn, tp = matrix.ravel()
-    return {
+    matrix = confusion_matrix(y_true, y_pred, labels=CLASS_LABELS)
+    precision = precision_score(y_true, y_pred, labels=CLASS_LABELS, average=None, zero_division=0)
+    recall = recall_score(y_true, y_pred, labels=CLASS_LABELS, average=None, zero_division=0)
+    result = {
         "name": name,
         "ticker": ticker,
         "lag_days": lag,
@@ -145,20 +163,39 @@ def evaluate_predictions(
         "split": split_name,
         "rows": len(y_true),
         "accuracy": accuracy_score(y_true, y_pred),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
+        "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
+        "f1_macro": f1_score(y_true, y_pred, labels=CLASS_LABELS, average="macro", zero_division=0),
+        "f1_weighted": f1_score(y_true, y_pred, labels=CLASS_LABELS, average="weighted", zero_division=0),
     }
+    if y_proba is not None:
+        result["log_loss"] = log_loss(y_true, y_proba, labels=CLASS_LABELS)
+    else:
+        result["log_loss"] = np.nan
+
+    for true_label in CLASS_LABELS:
+        for pred_label in CLASS_LABELS:
+            result[f"cm_{CLASS_NAMES[true_label]}_{CLASS_NAMES[pred_label]}"] = int(
+                matrix[true_label, pred_label]
+            )
+    for index, label in enumerate(CLASS_LABELS):
+        result[f"precision_{CLASS_NAMES[label]}"] = precision[index]
+        result[f"recall_{CLASS_NAMES[label]}"] = recall[index]
+
+    returns = pd.DataFrame({"prediction": y_pred, "future_5d_return": realized_return.to_numpy()})
+    mean_returns = returns.groupby("prediction")["future_5d_return"].mean()
+    for label in CLASS_LABELS:
+        result[f"mean_future_5d_return_pred_{CLASS_NAMES[label]}"] = mean_returns.get(label, np.nan)
+    result["long_short_spread_pred_up_minus_down"] = mean_returns.get(2, np.nan) - mean_returns.get(0, np.nan)
+    return result
 
 
 def shap_importance(
     model: object,
     x_background: pd.DataFrame,
     x_explain: pd.DataFrame,
-) -> pd.Series:
+) -> dict[int, pd.Series]:
     if x_background.empty or x_explain.empty:
-        return pd.Series(dtype=float)
+        return {}
 
     background = x_background.sample(min(len(x_background), 30), random_state=RANDOM_STATE)
     explain = x_explain.sample(min(len(x_explain), 40), random_state=RANDOM_STATE)
@@ -169,10 +206,19 @@ def shap_importance(
         explanation = explainer(explain)
 
     values = explanation.values
-    if values.ndim == 3:
-        values = values[:, :, 1]
-    importances = np.abs(values).mean(axis=0)
-    return pd.Series(importances, index=explain.columns).sort_values(ascending=False)
+    if values.ndim == 2:
+        values = values[:, :, np.newaxis]
+
+    importances_by_class = {}
+    class_count = min(values.shape[2], len(CLASS_LABELS))
+    for class_index in range(class_count):
+        class_label = CLASS_LABELS[class_index]
+        importances = np.abs(values[:, :, class_index]).mean(axis=0)
+        importances_by_class[class_label] = pd.Series(
+            importances,
+            index=explain.columns,
+        ).sort_values(ascending=False)
+    return importances_by_class
 
 
 def save_shap_bar(
@@ -181,6 +227,7 @@ def save_shap_bar(
     name: str,
     lag: int,
     model_name: str,
+    class_label: int,
     output_dir: Path,
 ) -> None:
     if importances.empty:
@@ -188,10 +235,13 @@ def save_shap_bar(
     output_dir.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(7, 4))
     importances.sort_values().plot(kind="barh", color="#4C78A8")
-    plt.title(f"{name} lag {lag} {model_name} SHAP importance")
+    plt.title(f"{name} lag {lag} {model_name} SHAP {CLASS_NAMES[class_label]}")
     plt.xlabel("mean(|SHAP value|)")
     plt.tight_layout()
-    plt.savefig(output_dir / f"{name}_lag{lag}_{model_name}_shap_importance.png", dpi=160)
+    plt.savefig(
+        output_dir / f"{name}_lag{lag}_{model_name}_{CLASS_NAMES[class_label]}_shap_importance.png",
+        dpi=160,
+    )
     plt.close()
 
 
@@ -203,6 +253,8 @@ def run_model_comparison(
     os.environ.setdefault("MPLCONFIGDIR", str(PROJECT_ROOT / ".matplotlib-cache"))
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
+    for stale_path in figures_dir.glob("*_shap_importance.png"):
+        stale_path.unlink()
 
     metric_rows = []
     shap_rows = []
@@ -217,19 +269,22 @@ def run_model_comparison(
             if not feature_columns:
                 raise ValueError(f"no lag {lag} features found in {path}")
 
-            x_train, y_train = prepare_split(data, feature_columns, "train")
+            x_train, y_train, _ = prepare_split(data, feature_columns, "train")
             if x_train.empty:
                 raise ValueError(f"empty train split for {name} lag {lag}")
+            if len(set(y_train)) < len(CLASS_LABELS):
+                raise ValueError(f"train split lacks all target classes for {name} lag {lag}")
 
             for spec in MODEL_SPECS:
                 model = model_pipeline(spec)
                 model.fit(x_train, y_train)
 
                 for split_name in ["validation", "test", "recent_regime"]:
-                    x_eval, y_eval = prepare_split(data, feature_columns, split_name)
+                    x_eval, y_eval, realized_return = prepare_split(data, feature_columns, split_name)
                     if x_eval.empty:
                         continue
                     y_pred = model.predict(x_eval)
+                    y_proba = model.predict_proba(x_eval) if hasattr(model, "predict_proba") else None
                     metric_rows.append(
                         evaluate_predictions(
                             name=name,
@@ -239,30 +294,36 @@ def run_model_comparison(
                             split_name=split_name,
                             y_true=y_eval,
                             y_pred=y_pred,
+                            y_proba=y_proba,
+                            realized_return=realized_return,
                         )
                     )
 
-                x_test, _ = prepare_split(data, feature_columns, "test")
-                importances = shap_importance(model, x_train, x_test)
-                save_shap_bar(
-                    importances,
-                    name=name,
-                    lag=lag,
-                    model_name=spec.name,
-                    output_dir=figures_dir,
-                )
-                for feature, value in importances.items():
-                    shap_rows.append(
-                        {
-                            "name": name,
-                            "ticker": ticker,
-                            "lag_days": lag,
-                            "model": spec.name,
-                            "split": "test",
-                            "feature": feature,
-                            "mean_abs_shap": value,
-                        }
+                x_test, _, _ = prepare_split(data, feature_columns, "test")
+                importances_by_class = shap_importance(model, x_train, x_test)
+                for class_label, importances in importances_by_class.items():
+                    save_shap_bar(
+                        importances,
+                        name=name,
+                        lag=lag,
+                        model_name=spec.name,
+                        class_label=class_label,
+                        output_dir=figures_dir,
                     )
+                    for feature, value in importances.items():
+                        shap_rows.append(
+                            {
+                                "name": name,
+                                "ticker": ticker,
+                                "lag_days": lag,
+                                "model": spec.name,
+                                "split": "test",
+                                "class_id": class_label,
+                                "class_name": CLASS_NAMES[class_label],
+                                "feature": feature,
+                                "mean_abs_shap": value,
+                            }
+                        )
 
     metrics = pd.DataFrame(metric_rows)
     shap_summary = pd.DataFrame(shap_rows)

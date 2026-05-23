@@ -18,8 +18,16 @@ RECENT_START = "2025-01-01"
 
 CORE_MACRO_COLUMNS = ["nasdaq", "sox", "vix", "us_rate", "usd_krw"]
 CORE_MACRO_LAGS = [1, 3, 5]
-TARGET_THRESHOLD = 0.01
+LABEL_HORIZON_DAYS = 5
+TARGET_DOWN_QUANTILE = 0.30
+TARGET_UP_QUANTILE = 0.70
 SAME_DAY_PRICE_COLUMNS = ["open", "high", "low", "close", "volume", "return_pct"]
+LABEL_AUDIT_COLUMNS = [
+    "future_5d_date",
+    "future_5d_return",
+    "target_threshold_lower",
+    "target_threshold_upper",
+]
 
 
 @dataclass(frozen=True)
@@ -134,21 +142,11 @@ def is_model_feature_column(column: str) -> bool:
     )
 
 
-def add_return_and_labels(data: pd.DataFrame, threshold: float = TARGET_THRESHOLD) -> pd.DataFrame:
+def add_future_return(data: pd.DataFrame, horizon: int = LABEL_HORIZON_DAYS) -> pd.DataFrame:
     result = data.copy()
     result["return_pct"] = result["close"].pct_change()
-    result["target_up_1pct"] = pd.Series(pd.NA, index=result.index, dtype="Int64")
-    result["target_down_1pct"] = pd.Series(pd.NA, index=result.index, dtype="Int64")
-    known_return = result["return_pct"].notna()
-    result.loc[known_return, "target_up_1pct"] = (
-        result.loc[known_return, "return_pct"] >= threshold
-    ).astype("int64")
-    result.loc[known_return, "target_down_1pct"] = (
-        result.loc[known_return, "return_pct"] <= -threshold
-    ).astype("int64")
-    result["target_direction_1pct"] = pd.Series(pd.NA, index=result.index, dtype="Int64")
-    result.loc[result["return_pct"] >= threshold, "target_direction_1pct"] = 1
-    result.loc[result["return_pct"] <= -threshold, "target_direction_1pct"] = 0
+    result["future_5d_date"] = pd.Series(result.index, index=result.index).shift(-horizon)
+    result["future_5d_return"] = result["close"].shift(-horizon) / result["close"] - 1
     return result
 
 
@@ -159,7 +157,7 @@ def assign_period(date_index: pd.DatetimeIndex) -> pd.Series:
     return periods
 
 
-def assign_time_split(data: pd.DataFrame) -> pd.Series:
+def assign_time_split(data: pd.DataFrame, horizon: int = LABEL_HORIZON_DAYS) -> pd.Series:
     split = pd.Series(pd.NA, index=data.index, dtype="string")
     model_mask = data["period_bucket"] == "model_2018_2024"
     model_index = data.index[model_mask]
@@ -169,21 +167,56 @@ def assign_time_split(data: pd.DataFrame) -> pd.Series:
 
     train_end = int(model_count * 0.70)
     validation_end = int(model_count * 0.85)
+    validation_start = min(train_end + horizon, model_count)
+    test_start = min(validation_end + horizon, model_count)
+
     split.loc[model_index[:train_end]] = "train"
-    split.loc[model_index[train_end:validation_end]] = "validation"
-    split.loc[model_index[validation_end:]] = "test"
+    split.loc[model_index[train_end:validation_start]] = "embargo"
+    split.loc[model_index[validation_start:validation_end]] = "validation"
+    split.loc[model_index[validation_end:test_start]] = "embargo"
+    split.loc[model_index[test_start:]] = "test"
     split.loc[data["period_bucket"] == "recent_regime_2025_plus"] = "recent_regime"
     return split
+
+
+def add_quantile_labels(
+    data: pd.DataFrame,
+    *,
+    down_quantile: float = TARGET_DOWN_QUANTILE,
+    up_quantile: float = TARGET_UP_QUANTILE,
+) -> pd.DataFrame:
+    result = data.copy()
+    train_returns = result.loc[
+        (result["time_split"] == "train") & result["future_5d_return"].notna(),
+        "future_5d_return",
+    ]
+    if train_returns.empty:
+        raise ValueError("cannot calibrate target thresholds without train future returns")
+
+    lower = float(train_returns.quantile(down_quantile))
+    upper = float(train_returns.quantile(up_quantile))
+    if lower >= upper:
+        raise ValueError(f"invalid target thresholds: lower={lower}, upper={upper}")
+
+    result["target_threshold_lower"] = lower
+    result["target_threshold_upper"] = upper
+    result["target_5d_3class"] = pd.Series(pd.NA, index=result.index, dtype="Int64")
+    known_return = result["future_5d_return"].notna()
+    result.loc[known_return, "target_5d_3class"] = 1
+    result.loc[result["future_5d_return"] <= lower, "target_5d_3class"] = 0
+    result.loc[result["future_5d_return"] >= upper, "target_5d_3class"] = 2
+    return result
 
 
 def build_core_dataset(raw_run_path: Path, spec: TickerSpec, macro: pd.DataFrame) -> pd.DataFrame:
     prices = load_price_frame(raw_run_path, spec)
     macro_features = build_macro_features_for_dates(macro, prices.index)
     dataset = prices.join(macro_features, how="left")
-    dataset = add_return_and_labels(dataset)
+    dataset = add_future_return(dataset)
     dataset["market"] = spec.market
     dataset["period_bucket"] = assign_period(dataset.index)
     dataset["time_split"] = assign_time_split(dataset)
+    dataset = add_quantile_labels(dataset)
     dataset = dataset.reset_index()
     feature_columns = [
         column
@@ -196,9 +229,8 @@ def build_core_dataset(raw_run_path: Path, spec: TickerSpec, macro: pd.DataFrame
         "market",
         "period_bucket",
         "time_split",
-        "target_up_1pct",
-        "target_down_1pct",
-        "target_direction_1pct",
+        "target_5d_3class",
+        *LABEL_AUDIT_COLUMNS,
     ] + feature_columns
     return dataset[output_columns]
 
@@ -224,14 +256,21 @@ def summarize_dataset(dataset: pd.DataFrame, spec: TickerSpec, run_id: str) -> d
         "model_rows_2018_2024": len(model_window),
         "recent_rows_2025_plus": len(recent_window),
         "train_rows": int(split_counts.get("train", 0)),
+        "embargo_rows": int(split_counts.get("embargo", 0)),
         "validation_rows": int(split_counts.get("validation", 0)),
         "test_rows": int(split_counts.get("test", 0)),
         "recent_regime_rows": int(split_counts.get("recent_regime", 0)),
-        "neutral_rows_1pct": int(dataset["target_direction_1pct"].isna().sum()),
-        "up_rows_1pct": int((dataset["target_direction_1pct"] == 1).sum()),
-        "down_rows_1pct": int((dataset["target_direction_1pct"] == 0).sum()),
+        "label_horizon_trading_days": LABEL_HORIZON_DAYS,
+        "target_down_quantile": TARGET_DOWN_QUANTILE,
+        "target_up_quantile": TARGET_UP_QUANTILE,
+        "target_threshold_lower": dataset["target_threshold_lower"].dropna().iloc[0],
+        "target_threshold_upper": dataset["target_threshold_upper"].dropna().iloc[0],
+        "target_missing_rows": int(dataset["target_5d_3class"].isna().sum()),
+        "down_rows_5d": int((dataset["target_5d_3class"] == 0).sum()),
+        "neutral_rows_5d": int((dataset["target_5d_3class"] == 1).sum()),
+        "up_rows_5d": int((dataset["target_5d_3class"] == 2).sum()),
         "feature_columns": ",".join(feature_columns),
-        "excluded_from_model_columns": ",".join(SAME_DAY_PRICE_COLUMNS),
+        "excluded_from_model_columns": ",".join(SAME_DAY_PRICE_COLUMNS + LABEL_AUDIT_COLUMNS),
         "max_core_feature_null_rate": dataset[feature_columns].isna().mean().max(),
         "max_model_feature_null_rate": model_feature_null_rate,
     }
@@ -251,6 +290,7 @@ def write_core_datasets(output_dir: Path = PROCESSED_ROOT / "core") -> None:
         "feature_coverage.csv",
         "label_distribution_by_split.csv",
         "leakage_checks.csv",
+        "label_policy_checks.csv",
     ]:
         for stale_path in output_dir.glob(pattern):
             stale_path.unlink()

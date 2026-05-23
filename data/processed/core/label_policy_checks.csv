@@ -1,0 +1,16 @@
+﻿name,ticker,check,violations,details,passed
+nvidia,NVDA,last_horizon_rows_have_pending_target,0,pending_rows=5,True
+nvidia,NVDA,supervised_splits_have_known_targets,0,,True
+nvidia,NVDA,target_threshold_boundaries,0,,True
+nvidia,NVDA,train_validation_embargo,0,"max_train_future_5d_date=2022-11-29,min_validation_date=2022-11-30",True
+nvidia,NVDA,validation_test_embargo,0,"max_validation_future_5d_date=2023-12-18,min_test_date=2023-12-19",True
+samsung_electronics,005930,last_horizon_rows_have_pending_target,0,pending_rows=5,True
+samsung_electronics,005930,supervised_splits_have_known_targets,0,,True
+samsung_electronics,005930,target_threshold_boundaries,0,,True
+samsung_electronics,005930,train_validation_embargo,0,"max_train_future_5d_date=2022-11-28,min_validation_date=2022-11-29",True
+samsung_electronics,005930,validation_test_embargo,0,"max_validation_future_5d_date=2023-12-13,min_test_date=2023-12-14",True
+sk_hynix,000660,last_horizon_rows_have_pending_target,0,pending_rows=5,True
+sk_hynix,000660,supervised_splits_have_known_targets,0,,True
+sk_hynix,000660,target_threshold_boundaries,0,,True
+sk_hynix,000660,train_validation_embargo,0,"max_train_future_5d_date=2022-11-28,min_validation_date=2022-11-29",True
+sk_hynix,000660,validation_test_embargo,0,"max_validation_future_5d_date=2023-12-13,min_test_date=2023-12-14",True
