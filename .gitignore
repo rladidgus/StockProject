@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 outputs/figures/
+!outputs/figures/
+!outputs/figures/model_comparison/
+!outputs/figures/model_comparison/*.png
 .DS_Store
 .codex-notes/
 .idea/
