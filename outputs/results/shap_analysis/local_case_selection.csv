@@ -1,0 +1,7 @@
+﻿name,ticker,experiment,feature_family,split,requested_class,date,true_label,predicted_label,requested_class_probability,fallback_used
+nvidia,NVDA,proposed_daily_extended,core_macro+rates+dollar+semi_etf,test,down,2023-12-29,2,0,0.9431113004684448,False
+nvidia,NVDA,proposed_daily_extended,core_macro+rates+dollar+semi_etf,test,up,2024-06-20,0,0,0.11422768980264664,True
+samsung_electronics,005930,core_plus_domestic_alpha,core_macro+domestic_alpha,test,down,2024-07-08,1,0,0.9488889575004578,False
+samsung_electronics,005930,core_plus_domestic_alpha,core_macro+domestic_alpha,test,up,2024-12-19,1,1,0.38024723529815674,True
+sk_hynix,000660,core_plus_domestic_alpha,core_macro+domestic_alpha,test,down,2024-12-02,2,0,0.9477018713951111,False
+sk_hynix,000660,core_plus_domestic_alpha,core_macro+domestic_alpha,test,up,2024-12-13,0,0,0.30607619881629944,True

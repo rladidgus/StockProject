@@ -173,9 +173,11 @@ def make_asof_lag_features(
             column: f"{column}_t_minus_{lag}"
             for column in value_columns
         }
-        rename_map["source_date"] = f"{value_columns[0]}_t_minus_{lag}_source_date"
-        rename_map["known_date"] = f"{value_columns[0]}_t_minus_{lag}_known_date"
         renamed = renamed.rename(columns=rename_map)
+        for column in value_columns:
+            renamed[f"{column}_t_minus_{lag}_source_date"] = merged["source_date"]
+            renamed[f"{column}_t_minus_{lag}_known_date"] = merged["known_date"]
+        renamed = renamed.drop(columns=["source_date", "known_date"])
         features = features.merge(renamed, on="date", how="left")
 
     return features

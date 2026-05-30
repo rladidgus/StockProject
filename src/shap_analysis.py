@@ -50,11 +50,11 @@ class SelectedExperiment:
 
 def read_selected_experiments(metrics_path: Path) -> dict[str, SelectedExperiment]:
     metrics = pd.read_csv(metrics_path, encoding="utf-8-sig")
-    test_metrics = metrics[metrics["split"] == "test"].copy()
-    if test_metrics.empty:
-        raise ValueError(f"no test metrics available: {metrics_path}")
+    selection_metrics = metrics[metrics["split"] == "validation"].copy()
+    if selection_metrics.empty:
+        raise ValueError(f"no validation metrics available: {metrics_path}")
     selected = {}
-    for ticker, group in test_metrics.groupby("ticker"):
+    for ticker, group in selection_metrics.groupby("ticker"):
         best = group.sort_values(["f1_macro", "balanced_accuracy"], ascending=False).iloc[0]
         selected[ticker] = SelectedExperiment(
             ticker=str(best["ticker"]),
@@ -151,20 +151,40 @@ def local_case_rows(
     predictions: np.ndarray,
     probabilities: np.ndarray,
     contributions: np.ndarray,
-) -> list[dict[str, object]]:
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     rows = []
+    selection_rows = []
     working = data[["date", TARGET_COLUMN, RETURN_COLUMN]].copy().reset_index(drop=True)
     working["prediction"] = predictions
-    working["prediction_probability"] = probabilities.max(axis=1)
+    for class_index, class_label in enumerate(CLASS_LABELS):
+        working[f"probability_{CLASS_NAMES[class_label]}"] = probabilities[:, class_index]
 
     for class_label in [0, 2]:
         candidates = working[working["prediction"] == class_label]
-        if candidates.empty:
-            continue
-        selected_index = int(candidates.sort_values("prediction_probability", ascending=False).index[0])
+        fallback_used = candidates.empty
+        if fallback_used:
+            probability_column = f"probability_{CLASS_NAMES[class_label]}"
+            candidates = working.sort_values(probability_column, ascending=False).head(1)
+        probability_column = f"probability_{CLASS_NAMES[class_label]}"
+        selected_index = int(candidates.sort_values(probability_column, ascending=False).index[0])
         class_index = CLASS_LABELS.index(class_label)
         shap_values = contributions[selected_index, class_index, :-1]
         bias = float(contributions[selected_index, class_index, -1])
+        selection_rows.append(
+            {
+                "name": name,
+                "ticker": ticker,
+                "experiment": experiment,
+                "feature_family": feature_family,
+                "split": split_name,
+                "requested_class": CLASS_NAMES[class_label],
+                "date": working.loc[selected_index, "date"],
+                "true_label": int(working.loc[selected_index, TARGET_COLUMN]),
+                "predicted_label": int(working.loc[selected_index, "prediction"]),
+                "requested_class_probability": float(working.loc[selected_index, probability_column]),
+                "fallback_used": fallback_used,
+            }
+        )
         top_indices = np.argsort(np.abs(shap_values))[::-1][:12]
         for rank, feature_index in enumerate(top_indices, start=1):
             rows.append(
@@ -176,9 +196,9 @@ def local_case_rows(
                     "split": split_name,
                     "date": working.loc[selected_index, "date"],
                     "true_label": int(working.loc[selected_index, TARGET_COLUMN]),
-                    "predicted_label": int(class_label),
-                    "predicted_class_name": CLASS_NAMES[class_label],
-                    "prediction_probability": float(working.loc[selected_index, "prediction_probability"]),
+                    "predicted_label": int(working.loc[selected_index, "prediction"]),
+                    "explained_class_name": CLASS_NAMES[class_label],
+                    "prediction_probability": float(working.loc[selected_index, probability_column]),
                     "future_5d_return": float(working.loc[selected_index, RETURN_COLUMN]),
                     "base_value": bias,
                     "rank": rank,
@@ -187,7 +207,7 @@ def local_case_rows(
                     "feature_value": float(data.iloc[selected_index][feature_columns[feature_index]]),
                 }
             )
-    return rows
+    return rows, selection_rows
 
 
 def plot_global_importance(data: pd.DataFrame, output_dir: Path) -> None:
@@ -207,21 +227,28 @@ def plot_global_importance(data: pd.DataFrame, output_dir: Path) -> None:
 
 def plot_local_cases(data: pd.DataFrame, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    for (name, ticker, experiment, date, predicted_class), group in data.groupby(
-        ["name", "ticker", "experiment", "date", "predicted_class_name"]
+    for (name, ticker, experiment, date, explained_class), group in data.groupby(
+        ["name", "ticker", "experiment", "date", "explained_class_name"]
     ):
         top = group.sort_values("rank", ascending=False)
         colors = np.where(top["shap_value"] >= 0, "#b23a48", "#2f6f9f")
         fig, ax = plt.subplots(figsize=(9, 6))
         ax.barh(top["feature"], top["shap_value"], color=colors)
         ax.axvline(0, color="#333333", linewidth=0.8)
-        ax.set_title(f"{name} {predicted_class} prediction on {pd.to_datetime(date).date()}")
+        ax.set_title(f"{name} {explained_class} class explanation on {pd.to_datetime(date).date()}")
         ax.set_xlabel("SHAP contribution to predicted class logit")
         ax.set_ylabel("")
         fig.tight_layout()
         safe_date = pd.to_datetime(date).date().isoformat()
-        fig.savefig(output_dir / f"{name}_{ticker}_{experiment}_{safe_date}_{predicted_class}_local.png", dpi=160)
+        fig.savefig(output_dir / f"{name}_{ticker}_{experiment}_{safe_date}_{explained_class}_local.png", dpi=160)
         plt.close(fig)
+
+
+def clear_previous_outputs(results_dir: Path) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
+    for pattern in ["*.csv", "*.png"]:
+        for path in results_dir.glob(pattern):
+            path.unlink()
 
 
 def run_shap_analysis(
@@ -229,12 +256,13 @@ def run_shap_analysis(
     proposed_results_dir: Path = PROPOSED_RESULTS_DIR,
     results_dir: Path = RESULTS_DIR,
 ) -> None:
-    results_dir.mkdir(parents=True, exist_ok=True)
+    clear_previous_outputs(results_dir)
     selected = read_selected_experiments(proposed_results_dir / "model_metrics.csv")
     raw_path = raw_run_path()
     selected_rows = []
     global_rows = []
     local_rows = []
+    local_selection_rows = []
 
     for path in dataset_files(input_dir):
         core_data = pd.read_csv(path, encoding="utf-8-sig", parse_dates=["date"], dtype={"ticker": "string"})
@@ -261,7 +289,7 @@ def run_shap_analysis(
                 "ticker": ticker,
                 "experiment": selection.experiment,
                 "feature_family": selection.feature_family,
-                "selected_by": "test_f1_macro",
+                "selected_by": "validation_f1_macro",
                 "selection_metric": selection.selection_metric,
                 "feature_count": len(feature_columns),
             }
@@ -287,27 +315,29 @@ def run_shap_analysis(
                 )
             )
             if split_name == "test":
-                local_rows.extend(
-                    local_case_rows(
-                        data=evaluation,
-                        name=name,
-                        ticker=ticker,
-                        experiment=selection.experiment,
-                        feature_family=selection.feature_family,
-                        split_name=split_name,
-                        feature_columns=feature_columns,
-                        predictions=predictions,
-                        probabilities=probabilities,
-                        contributions=contributions,
-                    )
+                case_rows, selection_case_rows = local_case_rows(
+                    data=evaluation,
+                    name=name,
+                    ticker=ticker,
+                    experiment=selection.experiment,
+                    feature_family=selection.feature_family,
+                    split_name=split_name,
+                    feature_columns=feature_columns,
+                    predictions=predictions,
+                    probabilities=probabilities,
+                    contributions=contributions,
                 )
+                local_rows.extend(case_rows)
+                local_selection_rows.extend(selection_case_rows)
 
     selected_frame = pd.DataFrame(selected_rows)
     global_frame = pd.DataFrame(global_rows)
     local_frame = pd.DataFrame(local_rows)
+    local_selection_frame = pd.DataFrame(local_selection_rows)
     selected_frame.to_csv(results_dir / "selected_models.csv", index=False, encoding="utf-8-sig")
     global_frame.to_csv(results_dir / "global_shap_importance.csv", index=False, encoding="utf-8-sig")
     local_frame.to_csv(results_dir / "local_shap_cases.csv", index=False, encoding="utf-8-sig")
+    local_selection_frame.to_csv(results_dir / "local_case_selection.csv", index=False, encoding="utf-8-sig")
     plot_global_importance(global_frame, results_dir)
     plot_local_cases(local_frame, results_dir)
 

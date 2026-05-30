@@ -1,4 +1,4 @@
 ﻿name,ticker,experiment,feature_family,selected_by,selection_metric,feature_count
-nvidia,NVDA,proposed_daily_extended,core_macro+rates+dollar+semi_etf,test_f1_macro,0.2324783255015813,33
-samsung_electronics,005930,core_plus_semi_etf,core_macro+semi_etf,test_f1_macro,0.2767156862745098,21
-sk_hynix,000660,core_plus_broad_dollar,core_macro+dollar,test_f1_macro,0.1791756727031808,18
+nvidia,NVDA,proposed_daily_extended,core_macro+rates+dollar+semi_etf,validation_f1_macro,0.19660979436652,33
+samsung_electronics,005930,core_plus_domestic_alpha,core_macro+domestic_alpha,validation_f1_macro,0.2688866107399344,21
+sk_hynix,000660,core_plus_domestic_alpha,core_macro+domestic_alpha,validation_f1_macro,0.1463065156355891,21
