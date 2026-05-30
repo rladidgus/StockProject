@@ -1,0 +1,4 @@
+﻿name,ticker,recipe,feature_family,selected_params,selected_by,validation_f1_macro,validation_balanced_accuracy,validation_accuracy,validation_log_loss
+sk_hynix,000660,technical_only,technical,depth3_regularized,validation_f1_macro,0.354582383311057,0.3565777722967229,0.35968379446640314,1.2082999978938298
+samsung_electronics,005930,technical_only,technical,depth3_regularized_unweighted,validation_f1_macro,0.3157982290872657,0.3187830687830688,0.35177865612648224,1.1686758448087706
+nvidia,NVDA,technical_monthly_industry,technical+monthly_industry,baseline_depth3_unweighted,validation_f1_macro,0.34982597334726934,0.40518053375196234,0.3745173745173745,1.2161554676833366
