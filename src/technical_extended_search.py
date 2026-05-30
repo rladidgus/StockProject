@@ -154,8 +154,57 @@ def build_technical_frame(data: pd.DataFrame) -> pd.DataFrame:
     raw_path = PROJECT_ROOT / str(manifest_row["raw_run_path"])
     ticker = str(data["ticker"].iloc[0])
     prices = add_technical_features(load_price_frame(raw_path, ticker))
+    prices = add_extended_technical_features(prices)
     technical = prices[["date", *technical_feature_columns(prices.columns)]]
     return data.merge(technical, on="date", how="left")
+
+
+def add_extended_technical_features(data: pd.DataFrame) -> pd.DataFrame:
+    result = data.copy()
+    close = result["close"].astype(float)
+    high = result["high"].astype(float)
+    low = result["low"].astype(float)
+    volume = result["volume"].astype(float)
+
+    ema12 = close.ewm(span=12, adjust=False, min_periods=12).mean()
+    ema26 = close.ewm(span=26, adjust=False, min_periods=26).mean()
+    macd = ema12 - ema26
+    macd_signal = macd.ewm(span=9, adjust=False, min_periods=9).mean()
+
+    low14 = low.rolling(14, min_periods=14).min()
+    high14 = high.rolling(14, min_periods=14).max()
+    stochastic_k = (close - low14) / (high14 - low14).replace(0, np.nan)
+
+    previous_close = close.shift(1)
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - previous_close).abs(),
+            (low - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    atr14 = true_range.rolling(14, min_periods=14).mean()
+
+    high20 = high.rolling(20, min_periods=20).max()
+    low20 = low.rolling(20, min_periods=20).min()
+    volume20 = volume.rolling(20, min_periods=20).mean()
+
+    result["tech_momentum_5d"] = close / close.shift(5) - 1
+    result["tech_momentum_10d"] = close / close.shift(10) - 1
+    result["tech_momentum_20d"] = close / close.shift(20) - 1
+    result["tech_macd_ratio"] = macd / close
+    result["tech_macd_signal_ratio"] = macd_signal / close
+    result["tech_macd_hist_ratio"] = (macd - macd_signal) / close
+    result["tech_stochastic_k14"] = stochastic_k
+    result["tech_stochastic_d3"] = stochastic_k.rolling(3, min_periods=3).mean()
+    result["tech_atr14_ratio"] = atr14 / close
+    result["tech_volume_ratio_20d"] = volume / volume20
+    result["tech_volume_change_1d"] = volume.pct_change()
+    result["tech_close_to_20d_high"] = close / high20 - 1
+    result["tech_close_to_20d_low"] = close / low20 - 1
+    result["tech_intraday_range_ratio"] = (high - low) / close
+    return result
 
 
 def build_recipe_frame(data: pd.DataFrame, raw_path: Path, recipe: FeatureRecipe) -> pd.DataFrame:
@@ -180,6 +229,7 @@ def prepare_split(
     split_name: str,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     subset = data[data["time_split"] == split_name].copy()
+    subset[feature_columns] = subset[feature_columns].replace([np.inf, -np.inf], np.nan)
     subset = subset.dropna(subset=feature_columns + [TARGET_COLUMN, RETURN_COLUMN])
     x = subset[feature_columns].astype(float)
     y = subset[TARGET_COLUMN].astype(int)

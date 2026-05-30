@@ -30,6 +30,18 @@ python3 -m src.technical_extended_search
 | `technical_daily_extended` | 기술적 지표 + core macro + 금리 + 달러 + 반도체 ETF |
 | `technical_all_guarded` | 위 후보군 전체, lag/as-of 안전장치 적용 |
 
+### 추가 기술적 피처
+
+기존 기술적 baseline의 MA/RSI/Bollinger 계열에 다음 피처를 추가했다.
+
+- 5/10/20일 momentum
+- MACD line/signal/histogram ratio
+- stochastic %K/%D
+- ATR ratio
+- volume ratio / volume change
+- 20일 고점/저점 대비 위치
+- intraday range ratio
+
 ### Hyperparameter
 
 가중치 적용 모델과 unweighted 모델을 함께 비교한다.
@@ -52,9 +64,9 @@ Validation 기준 종목별 선택 결과는 다음과 같다.
 
 | ticker | selected recipe | selected params | validation macro F1 |
 |---|---|---|---:|
-| `NVDA` | `technical_monthly_industry` | `baseline_depth3_unweighted` | 0.3498 |
-| `005930` | `technical_only` | `depth3_regularized_unweighted` | 0.3158 |
-| `000660` | `technical_only` | `depth3_regularized` | 0.3546 |
+| `NVDA` | `technical_monthly_industry` | `depth2_fast` | 0.3417 |
+| `005930` | `technical_domestic_alpha` | `depth4_slow_unweighted` | 0.2832 |
+| `000660` | `technical_only` | `depth4_slow_unweighted` | 0.3862 |
 
 Test 기준으로 보면 extended를 붙인 모델이 항상 개선되지는 않았다.
 특히 삼성전자와 SK하이닉스는 여전히 technical-only 계열이 강하다.
@@ -64,26 +76,25 @@ NVDA는 기존 기술적 baseline보다 tuned technical-only가 개선되었다.
 
 | ticker | 기존 technical baseline | 이번 탐색 best test |
 |---|---:|---:|
-| `NVDA` | 0.2563 | 0.2871 |
-| `005930` | 0.4111 | 0.3944 |
-| `000660` | 0.3572 | 0.3488 |
+| `NVDA` | 0.2563 | 0.3154 |
+| `005930` | 0.4111 | 0.3381 |
+| `000660` | 0.3572 | 0.4132 |
 
 따라서 현재까지의 결론은 다음과 같다.
 
+- 추가 기술적 피처는 SK하이닉스와 NVDA에서 기존 technical baseline을 개선했다.
+- 삼성전자는 기존 단순 technical baseline이 여전히 가장 강하다.
 - Extended 피처를 무작정 붙인다고 test 성능이 오르지 않는다.
-- 기술적 지표가 가장 강한 기준선이다.
 - Extended는 validation에서는 좋아 보일 수 있지만 test/recent regime에서 쉽게 무너진다.
-- 성능 개선은 단순 피처 추가보다 target 재정의, feature engineering, 모델/검증 설계 쪽에서 더 가능성이 크다.
+- 현재 성능 개선의 핵심은 extended 대량 투입보다 기술적 feature engineering 쪽이다.
 
 ## 다음 성능 개선 후보
 
 1. `target_5d_3class` 외에 binary up/down 또는 neutral 제외 실험을 별도 산출물로 만든다.
-2. 기술적 지표를 더 늘린다.
-   - MACD
-   - stochastic oscillator
-   - ATR
-   - volume moving average / volume shock
-   - 5/10/20일 momentum
+2. 기술적 지표 후보를 더 검증한다.
+   - feature importance 기반 pruning
+   - 종목별 기술적 피처 subset 선택
+   - rolling window 길이 5/10/20 외 추가 비교
 3. 종목별 feature recipe를 분리한다.
    - NVDA는 월간 업황 후보가 validation에서 강했다.
    - 국내 종목은 technical-only가 더 안정적이다.
