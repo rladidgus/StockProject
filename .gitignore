@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 outputs/figures/
+.cache/
+.matplotlib-cache/
 .DS_Store
 .codex-notes/
 .idea/
