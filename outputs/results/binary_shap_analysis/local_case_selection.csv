@@ -1,0 +1,7 @@
+﻿name,ticker,recipe,params,split,requested_class,date,true_label,predicted_label,requested_class_probability,fallback_used
+nvidia,NVDA,technical_only,baseline_depth3,test,down,2024-03-07,0,0,0.958458423614502,False
+nvidia,NVDA,technical_only,baseline_depth3,test,up,2024-12-05,0,1,0.8688749670982361,False
+samsung_electronics,005930,technical_only,depth3_regularized,test,down,2024-03-04,0,0,0.9593523144721985,False
+samsung_electronics,005930,technical_only,depth3_regularized,test,up,2024-01-17,1,1,0.9651292562484741,False
+sk_hynix,000660,technical_only,shallow_regularized,test,down,2024-10-07,1,0,0.8732349872589111,False
+sk_hynix,000660,technical_only,shallow_regularized,test,up,2024-12-06,1,1,0.9014384746551514,False

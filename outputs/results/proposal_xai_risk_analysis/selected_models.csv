@@ -1,0 +1,4 @@
+﻿name,ticker,recipe,params,selected_by,selection_metric,feature_count
+nvidia,NVDA,technical_all_guarded,depth2_fast,binary_validation_f1_macro_with_prediction_balance,0.4200686106346483,64
+samsung_electronics,005930,technical_all_guarded,depth3_conservative,binary_validation_f1_macro_with_prediction_balance,0.3675207608772801,70
+sk_hynix,000660,technical_all_guarded,depth4_slow,binary_validation_f1_macro_with_prediction_balance,0.4013449237329834,70
